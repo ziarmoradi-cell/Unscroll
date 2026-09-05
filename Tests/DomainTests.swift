@@ -4,8 +4,8 @@ import XCTest
 final class DomainTests: XCTestCase {
     func testRewardAndDuplicateCompletion() {
         var journal = Journal()
-        XCTAssertEqual(journal.reward(exercise: .pushups, amount: 10), 10)
-        XCTAssertEqual(journal.reward(exercise: .plank, amount: 29), 2)
+        XCTAssertEqual(journal.reward(exercise: .pushups, amount: 10), 20)
+        XCTAssertEqual(journal.reward(exercise: .plank, amount: 29), 0)
         let workout = Workout(exercise: .pushups, amount: 10, earnedMinutes: 10)
         XCTAssertTrue(journal.record(workout))
         XCTAssertFalse(journal.record(workout))

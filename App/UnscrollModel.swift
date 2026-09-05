@@ -42,8 +42,7 @@ final class UnscrollModel: ObservableObject {
 
     func saveProfile(_ profile: Profile) {
         guard !profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              profile.birthday <= Date(), (1...200).contains(profile.dailyGoal),
-              (1...5).contains(profile.minutesPerRep), (5...60).contains(profile.plankSecondsPerMinute) else {
+              profile.birthday <= Date(), (1...200).contains(profile.dailyGoal) else {
             error = "Bitte Namen, Geburtsdatum und gültige Ziele eintragen."; return
         }
         mutate { state in state.journal.profile = profile; state.journal.profile.configured = true }

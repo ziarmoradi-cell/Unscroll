@@ -8,13 +8,16 @@ struct RootView: View {
     @EnvironmentObject var model: UnscrollModel
     @Environment(\.scenePhase) private var phase
     var body: some View {
-        TabView {
+        Group {
+        if !model.state.journal.profile.configured { OnboardingView() }
+        else { TabView {
             NavigationStack { HomeView() }.tabItem { Label("Heute", systemImage: "sun.max") }
             NavigationStack { TrainingView() }.tabItem { Label("Bewegen", systemImage: "figure.strengthtraining.functional") }
             NavigationStack { ReportView() }.tabItem { Label("Rückblick", systemImage: "chart.bar.xaxis") }
             NavigationStack { FriendsView() }.tabItem { Label("Gemeinsam", systemImage: "person.2") }
             NavigationStack { ProfileView() }.tabItem { Label("Profil", systemImage: "person.crop.circle") }
         }
+        } }
         .task { model.refresh() }
         .onChange(of: phase) { _, phase in if phase == .active { model.refresh() } }
         .alert("Unscroll", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) {
@@ -55,6 +58,7 @@ struct HomeView: View {
                     Spacer()
                     Text("\(model.state.emergencyCount) Ausnahmen").foregroundStyle(.secondary)
                 }.font(.subheadline)
+                StepsCard()
                 NavigationLink { TrainingView() } label: { Label("Mit Bewegung Zeit verdienen", systemImage: "arrow.up.right") }.buttonStyle(.bordered)
                 VStack(alignment: .leading, spacing: 8) {
                     Label("Dein Assistent", systemImage: "sparkles").foregroundStyle(mint)
@@ -107,7 +111,7 @@ struct TrainingView: View {
                             Image(systemName: item.symbol).font(.largeTitle).frame(width: 44)
                             VStack(alignment: .leading) {
                                 Text(item.title).font(.headline)
-                                Text(item == .plank ? "\(model.state.journal.profile.plankSecondsPerMinute) Sekunden → 1 Minute" : "1 Wiederholung → \(model.state.journal.profile.minutesPerRep) Minute(n)").font(.caption).foregroundStyle(.secondary)
+                                Text(item == .plank ? "30 Sekunden → \(model.state.journal.profile.mode.multiplier) Min." : "1 Wiederholung → \(model.state.journal.profile.mode.multiplier) Min.").font(.caption).foregroundStyle(.secondary)
                             }
                             Spacer(); Image(systemName: "arrow.up.right")
                         }.padding(22).background(.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 22))
@@ -137,7 +141,7 @@ struct ReportView: View {
                     Spacer(); Text(weekOffset == 0 ? "Diese Woche" : "Woche vom \(anchor.formatted(date: .abbreviated, time: .omitted))"); Spacer()
                     Button { weekOffset += 1 } label: { Image(systemName: "chevron.right") }.disabled(weekOffset >= 0).accessibilityLabel("Nächste Woche")
                 }.buttonStyle(.borderless)
-                Text("\(workouts.reduce(0) { $0 + $1.earnedMinutes }) Minuten verdient").font(.title.bold())
+                Text("\(workouts.reduce(0) { $0 + $1.earnedMinutes } + model.state.journal.stepWeek(at: anchor).reduce(0) { $0 + $1.minutes }) Minuten verdient").font(.title.bold())
                 Chart(workouts) { workout in
                     BarMark(x: .value("Tag", workout.date, unit: .day), y: .value("Minuten", workout.earnedMinutes)).foregroundStyle(mint)
                 }.frame(height: 160)
@@ -146,6 +150,10 @@ struct ReportView: View {
                 ForEach(Exercise.allCases) { exercise in
                     LabeledContent(exercise.title, value: "\(workouts.filter { $0.exercise == exercise }.reduce(0) { $0 + $1.amount }) \(exercise.unit)")
                 }
+            }
+            Section("Schritte") {
+                LabeledContent("Gelaufen", value: "\(model.state.journal.stepWeek(at: anchor).reduce(0) { $0 + $1.steps }) Schritte")
+                LabeledContent("Gutgeschrieben", value: "\(model.state.journal.stepWeek(at: anchor).reduce(0) { $0 + $1.minutes }) Min.")
             }
             Section("Bildschirmzeit") {
                 LabeledContent("Von iOS bestätigte Nutzung", value: "\(usage.reduce(0) { $0 + $1.confirmedMinutes }) Min.")
@@ -182,8 +190,10 @@ struct ProfileView: View {
             }
             Section("Deine Ziele") {
                 Stepper("\(draft.dailyGoal) Wiederholungen pro Tag", value: $draft.dailyGoal, in: 1...200)
-                Stepper("\(draft.minutesPerRep) Minute(n) pro Wiederholung", value: $draft.minutesPerRep, in: 1...5)
-                Stepper("\(draft.plankSecondsPerMinute) Plank-Sekunden pro Minute", value: $draft.plankSecondsPerMinute, in: 5...60, step: 5)
+                Picker("Modus", selection: Binding(get: { draft.mode }, set: { draft.difficulty = $0 })) {
+                    ForEach(Difficulty.allCases) { Text("\($0.title) · ×\($0.multiplier)").tag($0) }
+                }
+                Text("1 Wiederholung / 30 Sekunden Plank / 1.000 Schritte → \(draft.mode.multiplier) Min. Änderungen gelten für künftige Gutschriften.").font(.caption)
                 Button("Profil und Ziele speichern") { model.saveProfile(draft) }
             }
             Section("Dein Abend") {

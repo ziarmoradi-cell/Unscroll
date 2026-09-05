@@ -23,6 +23,7 @@ targets:
       properties:
         CFBundleDisplayName: Unscroll
         UnscrollAppGroup: group.com.example.unscroll
+        NSMotionUsageDescription: Unscroll liest deine iPhone-Schritte, damit du fürs Gehen Bildschirmzeit verdienen kannst.
         NSCameraUsageDescription: Unscroll erkennt deine Übungen direkt auf dem iPhone, um Bildschirmzeit gutzuschreiben. Kamerabilder werden nicht gespeichert oder hochgeladen.
         NSAlarmKitUsageDescription: Unscroll weckt dich zur gewünschten Uhrzeit.
         NSGKFriendListUsageDescription: Unscroll zeigt dir deine Game-Center-Freunde für gemeinsame Vergleiche.

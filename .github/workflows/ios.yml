@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Preview account tests
-        run: node --test preview/model.test.cjs
+        run: node --test preview/*.test.cjs
       - name: Core logic tests
         run: swift test
       - name: Generate Xcode project

@@ -1,5 +1,7 @@
 # Unscroll
 
+Neu: [Version 0.3 – Intro, drei Modi und Schritte](UPDATE-0.3.md). Dieser Stand ersetzt die älteren Statusangaben unten.
+
 **Bildschirmzeit, die du dir verdienst.** Nativer iOS-Prototyp mit SwiftUI, Apple Vision und Screen-Time-APIs.
 
 ## Ehrlicher Stand

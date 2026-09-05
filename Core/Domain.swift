@@ -8,13 +8,29 @@ enum Exercise: String, Codable, CaseIterable, Identifiable {
     var unit: String { self == .plank ? "Sekunden" : "Wiederholungen" }
 }
 
+enum Difficulty: String, Codable, CaseIterable, Identifiable {
+    case beginner, normal, hard
+    var id: String { rawValue }
+    var title: String { switch self { case .beginner: "Beginner"; case .normal: "Normal"; case .hard: "Schwierig" } }
+    var multiplier: Int { switch self { case .beginner: 3; case .normal: 2; case .hard: 1 } }
+}
+
+struct StepDay: Codable {
+    var steps = 0
+    var claimedBlocks = 0
+    var minutes = 0
+    var date = Date()
+}
+
 struct Profile: Codable {
     var name = ""
     var birthday = Calendar.current.date(byAdding: .year, value: -18, to: Date()) ?? Date()
     var configured = false
     var dailyGoal = 20
-    var minutesPerRep = 1
-    var plankSecondsPerMinute = 10
+    var difficulty: Difficulty? = .normal
+    var mode: Difficulty { difficulty ?? (minutesPerRep >= 3 ? .beginner : minutesPerRep == 2 ? .normal : .hard) }
+    var minutesPerRep = 2
+    var plankSecondsPerMinute = 30
     var eveningHour = 21
     var wakeHour = 7
     var wakeMinute = 0
@@ -46,6 +62,38 @@ struct Journal: Codable {
     var workouts: [Workout] = []
     var usage: [UsageSession] = []
     var challengeStart: Date?
+    var stepDays: [String: StepDay]?
+    var stepTimeZone: String?
+    var stepsEnabled: Bool?
+    var stepCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: stepTimeZone ?? TimeZone.current.identifier) ?? .current
+        return calendar
+    }
+    func stepKey(at date: Date) -> String { String(Int(stepCalendar.startOfDay(for: date).timeIntervalSince1970)) }
+    func stepDay(at date: Date = Date()) -> StepDay { stepDays?[stepKey(at: date)] ?? StepDay(date: date) }
+    mutating func updateSteps(_ total: Int, at date: Date = Date()) {
+        guard total >= 0, total <= 200000 else { return }
+        if stepTimeZone == nil { stepTimeZone = TimeZone.current.identifier }
+        let key = stepKey(at: date)
+        var day = stepDays?[key] ?? StepDay(date: date)
+        day.steps = max(day.steps, total)
+        if stepDays == nil { stepDays = [:] }
+        stepDays?[key] = day
+    }
+    mutating func claimSteps(at date: Date = Date()) -> Int {
+        let key = stepKey(at: date)
+        guard var day = stepDays?[key] else { return 0 }
+        let blocks = max(0, day.steps / 1000 - day.claimedBlocks)
+        let earned = blocks * profile.mode.multiplier
+        day.claimedBlocks += blocks; day.minutes += earned
+        stepDays?[key] = day; bank += earned
+        return earned
+    }
+    func stepWeek(at date: Date = Date(), calendar: Calendar = .current) -> [StepDay] {
+        guard let interval = calendar.dateInterval(of: .weekOfYear, for: date) else { return [] }
+        return (stepDays ?? [:]).values.filter { interval.contains($0.date) }
+    }
 
     mutating func record(_ workout: Workout) -> Bool {
         guard workout.amount > 0, workout.earnedMinutes >= 0,
@@ -57,7 +105,7 @@ struct Journal: Codable {
 
     func reward(exercise: Exercise, amount: Int) -> Int {
         guard amount > 0 else { return 0 }
-        return exercise == .plank ? amount / max(1, profile.plankSecondsPerMinute) : amount * max(1, profile.minutesPerRep)
+        return (exercise == .plank ? amount / 30 : amount) * profile.mode.multiplier
     }
 
     func week(at date: Date = Date(), calendar: Calendar = .current) -> [Workout] {
