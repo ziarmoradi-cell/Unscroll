@@ -60,7 +60,7 @@ final class UnscrollModel: ObservableObject {
 
     func mutate(_ body: (inout Session) throws -> Void) {
         do { try SharedState.transaction(body); refresh() }
-        catch { error = error.localizedDescription }
+        catch { self.error = error.localizedDescription }
     }
 
     func start(emergency: Bool = false) {
