@@ -1,1 +1,48 @@
-
+workflows:
+  ios-check:
+    name: Unscroll · compile and test
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      xcode: latest
+    scripts:
+      - name: Test workout and reward logic
+        script: swift test
+      - name: Generate Xcode project
+        script: |
+          set -euo pipefail
+          brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+          python3 scripts/configure.py
+          xcodegen generate --spec project.generated.yml
+      - name: Compile iOS app and Screen Time extension
+        script: |
+          set -euo pipefail
+          xcodebuild -project Unscroll.xcodeproj -scheme Unscroll -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+    artifacts:
+      - build/Build/Products/Debug-iphonesimulator/*.app
+      - /tmp/xcodebuild_logs/*.log
+  ios-device:
+    name: Unscroll · signed iPhone prototype
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      xcode: latest
+      ios_signing:
+        distribution_type: ad_hoc
+        bundle_identifier: com.ziarmoradicell.unscroll
+    scripts:
+      - name: Test workout and reward logic
+        script: swift test
+      - name: Generate project
+        script: |
+          set -euo pipefail
+          brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+          python3 scripts/configure.py
+          xcodegen generate --spec project.generated.yml
+      - name: Apply Apple provisioning profiles
+        script: xcode-project use-profiles
+      - name: Build installable prototype
+        script: xcode-project build-ipa --project Unscroll.xcodeproj --scheme Unscroll
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log

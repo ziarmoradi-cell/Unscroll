@@ -1,0 +1,31 @@
+name: iOS prototype checks
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ios:
+    runs-on: macos-26
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preview account tests
+        run: node --test preview/model.test.cjs
+      - name: Core logic tests
+        run: swift test
+      - name: Generate Xcode project
+        run: |
+          brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+          python3 scripts/configure.py
+          xcodegen generate --spec project.generated.yml
+      - name: Compile app and extension
+        run: |
+          set -o pipefail
+          xcodebuild -project Unscroll.xcodeproj -scheme Unscroll -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build > build.log 2>&1 || { tail -100 build.log; exit 1; }
+      - name: Preserve build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: build.log
