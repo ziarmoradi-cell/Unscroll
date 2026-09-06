@@ -1,0 +1,19 @@
+name: iOS build and counting tests
+on:
+  push:
+    branches: [feature/pose-recognition]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test pose counting and economy
+        working-directory: Unscroll_Xcode_V1
+        run: swift test
+      - name: Build app and monitor extension
+        run: xcodebuild -project Unscroll_Xcode_V1/Unscroll.xcodeproj -scheme Unscroll -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build

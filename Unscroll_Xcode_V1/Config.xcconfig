@@ -1,0 +1,4 @@
+// Keep the SAME app identifier and team as your existing App Store app.
+UNSCROLL_APP_BUNDLE_ID = com.ziar.unscroll
+UNSCROLL_APP_GROUP = group.$(UNSCROLL_APP_BUNDLE_ID)
+// Select your team for BOTH targets in Xcode (or set DEVELOPMENT_TEAM here).
