@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#111611"><title>Unscroll · Dein Prototyp</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="model.js" defer></script><script src="app.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="#home" aria-label="Unscroll Start"><span class="brandmark">u↗</span>unscroll<span class="beta">BETA</span></a>
+    <div class="nav-caption">MEHR LEBEN. WENIGER SCROLLEN.</div>
+    <nav id="nav" aria-label="Hauptnavigation"></nav>
+    <div class="sidebar-bottom"><span class="status-dot"></span> Dein Fortschritt bleibt bei dir.<p>Lokale Vorschau · keine Cloud-Synchronisierung</p></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><span id="date"></span><div><span class="preview-badge">Interaktiver Prototyp</span><button id="avatar" class="avatar" aria-label="Profil öffnen">U</button></div></header>
+    <div class="simulation-note"><span>ⓘ</span><span><strong>Vorschau am PC.</strong> App-Nutzung, Kamera und Freunde sind Simulationen. Echte iPhone-Apps werden hier nicht gesperrt.</span></div>
+    <main id="content"></main>
+    <footer>unscroll <span>Earn your screen time. Get your life back.</span><button id="reset" class="text-button">Vorschau zurücksetzen</button></footer>
+  </div>
+  <dialog id="dialog" aria-labelledby="dialog-title"></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+</body></html>
