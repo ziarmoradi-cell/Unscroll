@@ -2,6 +2,7 @@
 from pathlib import Path
 import hashlib, json, plistlib
 root = Path(__file__).resolve().parents[1] / 'Unscroll_Xcode_V1'
+original = json.loads((root / 'MacProjectSettings.json').read_text())
 objects = {}
 def oid(name): return hashlib.sha1(name.encode()).hexdigest()[:24].upper()
 def add(name, body):
@@ -15,6 +16,9 @@ monitor=core+shared+['Monitor/ActivityMonitor.swift']
 refs={}
 for path in sorted(set(app+monitor)):
     refs[path]=add(path, f'isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = {q(path)}; sourceTree = "<group>";')
+asset = add('asset', 'isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Unscroll/Asset.xcassets; sourceTree = "<group>";')
+assetbuild = add('assetbuild', f'isa = PBXBuildFile; fileRef = {asset};')
+refs['Unscroll/Asset.xcassets'] = asset
 config=add('Config.xcconfig','isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>";')
 product_app=add('productapp','isa = PBXFileReference; explicitFileType = wrapper.application; path = Unscroll.app; sourceTree = BUILT_PRODUCTS_DIR;')
 product_ext=add('productext','isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; path = UnscrollMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR;')
@@ -24,7 +28,8 @@ def settings(values): return '{'+' '.join(k+' = '+q(v)+';' for k,v in values.ite
 def configurations(name, values, base=False):
     configs=[]
     for mode in ['Debug','Release']:
-        v=dict(values)
+        v=dict(original.get(name, {}).get(mode, {}))
+        v.update(values)
         if name=='project': v.update(SWIFT_OPTIMIZATION_LEVEL='-Onone' if mode=='Debug' else '-O',DEBUG_INFORMATION_FORMAT='dwarf' if mode=='Debug' else 'dwarf-with-dsym')
         configs.append(add(name+mode,'isa = XCBuildConfiguration; '+(f'baseConfigurationReference = {config}; ' if base else '')+f'buildSettings = {settings(v)}; name = {mode};'))
     return add(name+'configlist',f'isa = XCConfigurationList; buildConfigurations = {arr(configs)}; defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')
@@ -39,8 +44,9 @@ for name, paths, product, bundle, info, entitlements in [
     builds=[add(name+p,f'isa = PBXBuildFile; fileRef = {refs[p]};') for p in paths]
     sources=add(name+'sources',f'isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = {arr(builds)}; runOnlyForDeploymentPostprocessing = 0;')
     frameworks=add(name+'frameworks','isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;')
-    resources=add(name+'resources','isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;')
+    resources=add(name+'resources',f'isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = {arr([assetbuild] if name=="Unscroll" else [])}; runOnlyForDeploymentPostprocessing = 0;')
     values=dict(PRODUCT_BUNDLE_IDENTIFIER=bundle,PRODUCT_NAME='$(TARGET_NAME)',INFOPLIST_FILE=info,CODE_SIGN_ENTITLEMENTS=entitlements,GENERATE_INFOPLIST_FILE='NO',LD_RUNPATH_SEARCH_PATHS='$(inherited) @executable_path/Frameworks'+(' @executable_path/../../Frameworks' if name!='Unscroll' else ''),SUPPORTED_PLATFORMS='iphoneos iphonesimulator')
+    values.update(CURRENT_PROJECT_VERSION='2', MARKETING_VERSION='1.1')
     if name!='Unscroll': values.update(APPLICATION_EXTENSION_API_ONLY='YES',SKIP_INSTALL='YES')
     conf=configurations(name,values)
     phases=[sources,frameworks,resources]+([embed] if name=='Unscroll' else [])
@@ -50,10 +56,14 @@ add('project',f'isa = PBXProject; attributes = {{BuildIndependentTargetsInParall
 (root/'Unscroll.xcodeproj/project.pbxproj').write_text('// !$*UTF8*$!\n{archiveVersion = 1; classes = {}; objectVersion = 56; objects = {\n'+'\n'.join(k+' = {'+v+'};' for k,v in objects.items())+'\n}; rootObject = '+oid('project')+'; }\n')
 base=dict(CFBundleDevelopmentRegion='de',CFBundleExecutable='$(EXECUTABLE_NAME)',CFBundleIdentifier='$(PRODUCT_BUNDLE_IDENTIFIER)',CFBundleInfoDictionaryVersion='6.0',CFBundleName='$(PRODUCT_NAME)',CFBundleShortVersionString='$(MARKETING_VERSION)',CFBundleVersion='$(CURRENT_PROJECT_VERSION)',UnscrollAppGroup='$(UNSCROLL_APP_GROUP)')
 appinfo=dict(base,CFBundlePackageType='APPL',CFBundleDisplayName='Unscroll',LSRequiresIPhoneOS=True,NSCameraUsageDescription='Unscroll erkennt Liegestütze, Kniebeugen und Plank auf deinem iPhone. Kamerabilder werden nicht gespeichert.',UILaunchScreen={},UISupportedInterfaceOrientations=['UIInterfaceOrientationPortrait'],ITSAppUsesNonExemptEncryption=False)
+appinfo = dict(original['info'], **appinfo)
 extinfo=dict(base,CFBundlePackageType='XPC!',NSExtension=dict(NSExtensionPointIdentifier='com.apple.deviceactivity.monitor-extension',NSExtensionPrincipalClass='$(PRODUCT_MODULE_NAME).ActivityMonitor'))
 for path,data in [('Unscroll/Info.plist',appinfo),('Monitor/Info.plist',extinfo)]: (root/path).write_bytes(plistlib.dumps(data))
 ent={'com.apple.developer.family-controls':True,'com.apple.security.application-groups':['$(UNSCROLL_APP_GROUP)']}
-for path in ['Unscroll/Unscroll.entitlements','Monitor/Monitor.entitlements']: (root/path).write_bytes(plistlib.dumps(ent))
+for path in ['Unscroll/Unscroll.entitlements','Monitor/Monitor.entitlements']:
+    merged = dict(original['entitlements']) if path.startswith('Unscroll/') else {}
+    merged.update(ent)
+    (root/path).write_bytes(plistlib.dumps(merged))
 scheme=root/'Unscroll.xcodeproj/xcshareddata/xcschemes/Unscroll.xcscheme'
 scheme.parent.mkdir(parents=True,exist_ok=True)
 ref=f'<BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="{oid("Unscroll")}" BuildableName="Unscroll.app" BlueprintName="Unscroll" ReferencedContainer="container:Unscroll.xcodeproj"/>'

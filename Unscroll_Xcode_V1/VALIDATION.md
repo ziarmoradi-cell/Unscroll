@@ -31,3 +31,17 @@ exit code 0 and all 13 assertions groups passing, without runtime diagnostics.
 
 No real-iPhone tests have been performed and no recognition accuracy claim is made.
 This deliverable is source prepared for integration and device validation, not a tested release.
+
+## Integration of uploaded Mac project
+
+The supplied Mac project has now been merged. Original Swift files matched the starter.
+AppIcon PNG was preserved byte-for-byte (SHA-256
+`0d214d3189bf2b3e2c5eb5bb47f50e92a41b252d42ad119e550803073f6569aa`).
+Bundle ID, development team, Game Center, original compiler settings and iPhone/portrait
+configuration were carried forward. App and monitor use version 1.1 / build 2.
+Structural checks passed for both targets, source/resource paths, asset catalog,
+entitlements and build versions.
+
+The preceding implementation passed swift test and an unsigned app+monitor simulator
+build on GitHub run 34049335799. The PR Checks tab records validation of this newer
+integration commit; signing and real-device behavior still require testing on the Mac/iPhone.
