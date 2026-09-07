@@ -32,7 +32,7 @@ import DeviceActivity
     func saveSelection() {
         do {
             try SharedStorage.transaction { ledger in
-                guard ledger.grant == nil else { throw ScreenTimeError.active }
+                guard ledger.grant == nil && !ledger.restricted() else { throw ScreenTimeError.active }
                 let data = try JSONEncoder().encode(selection)
                 try ShieldPolicy.block(data); ledger.selectionData = data
             }
@@ -96,8 +96,8 @@ private enum ScreenTimeError: LocalizedError {
     case balance, active
     var errorDescription: String? {
         switch self {
-        case .balance: return "Nicht genug Guthaben oder bereits eine Freischaltung aktiv."
-        case .active: return "Beende die Freischaltung, bevor du die App-Auswahl änderst."
+        case .balance: return "Freischaltung nicht möglich: Prüfe Guthaben, Tageslimit und aktive Pausen."
+        case .active: return "Beende zuerst die Freischaltung oder die aktive Pause, bevor du die App-Auswahl änderst."
         }
     }
 }

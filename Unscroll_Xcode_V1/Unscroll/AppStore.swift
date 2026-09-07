@@ -3,7 +3,27 @@ import SwiftUI
 @MainActor final class AppStore: ObservableObject {
     @Published private(set) var ledger = Ledger()
     @Published var error: String?
-    init() { reload() }
+    init() {
+        reload()
+        #if DEBUG && targetEnvironment(simulator)
+        if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
+            mutate { ledger in
+                ledger = Ledger(); ledger.migrated = true
+                if !ProcessInfo.processInfo.arguments.contains("--ui-screen=onboarding") {
+                    ledger.life.profile.name = "Alex"; ledger.life.profile.completedIntro = true
+                }
+            }
+        }
+        #endif
+    }
+    func mutate(_ change: (inout Ledger) -> Void) {
+        do { ledger = try SharedStorage.transaction { change(&$0); return $0 } }
+        catch { self.error = error.localizedDescription }
+    }
+    func settle() { mutate { $0.settleFocus() } }
+    func claimSteps(_ snapshot: StepSnapshot) {
+        mutate { $0.claimSteps(total: snapshot.total, day: snapshot.day) }
+    }
     func reload() {
         do {
             ledger = try SharedStorage.transaction { ledger in

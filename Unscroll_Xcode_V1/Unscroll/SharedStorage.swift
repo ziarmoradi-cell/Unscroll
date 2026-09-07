@@ -10,6 +10,13 @@ enum StorageFailure: LocalizedError {
 // Corrupt data is surfaced as an error, never silently reset.
 enum SharedStorage {
     static var directory: URL? {
+        #if DEBUG && targetEnvironment(simulator)
+        if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("UnscrollUITests")
+            try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+            return url
+        }
+        #endif
         guard let group = Bundle.main.object(forInfoDictionaryKey: "UnscrollAppGroup") as? String else { return nil }
         return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group)
     }

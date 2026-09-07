@@ -14,9 +14,11 @@ struct UnlockGrant: Codable {
     var id: String
     var seconds: Int
     var expires: Date
+    var budgetDay: String?
 }
 
 struct Ledger: Codable {
+    var wellbeing: Wellbeing?
     var balanceSeconds = 0
     var records: [String: Double] = [:]
     var workouts: [WorkoutEntry] = []
@@ -44,16 +46,19 @@ struct Ledger: Codable {
     }
 
     mutating func reserve(minutes: Int, now: Date = Date()) -> UnlockGrant? {
-        guard grant == nil, minutes > 0, minutes <= 120, balanceSeconds >= minutes * 60 else { return nil }
-        let new = UnlockGrant(id: UUID().uuidString, seconds: minutes * 60, expires: now.addingTimeInterval(24 * 3600))
+        guard grant == nil, !restricted(at: now), minutes > 0, minutes <= 120, dailyAvailableSeconds(at: now) >= minutes * 60, balanceSeconds >= minutes * 60 else { return nil }
+        let new = UnlockGrant(id: UUID().uuidString, seconds: minutes * 60, expires: now.addingTimeInterval(24 * 3600), budgetDay: Self.dayKey(now))
         balanceSeconds -= new.seconds
+        life.redeemedSeconds[Self.dayKey(now), default: 0] += new.seconds
         grant = new
         return new
     }
 
     mutating func cancelFailedReservation(_ id: String) {
         guard let current = grant, current.id == id else { return }
-        balanceSeconds += current.seconds; grant = nil
+        balanceSeconds += current.seconds
+        if let day = current.budgetDay { life.redeemedSeconds[day] = max(0, (life.redeemedSeconds[day] ?? 0) - current.seconds) }
+        grant = nil
     }
 
     mutating func finishGrant(_ id: String) {

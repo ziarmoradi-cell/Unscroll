@@ -9,9 +9,9 @@ def add(name, body):
     key=oid(name); objects[key]=body; return key
 def q(s): return json.dumps(str(s))
 def arr(items): return '(' + ','.join(items) + ',)' if items else '()'
-core=['Core/PoseCounter.swift','Core/Economy.swift']
+core=['Core/PoseCounter.swift','Core/Economy.swift','Core/Wellbeing.swift']
 shared=['Unscroll/SharedStorage.swift','Unscroll/ShieldPolicy.swift']
-app=core+shared+['Unscroll/'+x for x in ['AppStore.swift','UnscrollApp.swift','ContentView.swift','WorkoutView.swift','PoseCamera.swift','ScreenTimeController.swift']]
+app=core+shared+['Unscroll/'+x for x in ['AppStore.swift','UnscrollApp.swift','ContentView.swift','WorkoutView.swift','PoseCamera.swift','ScreenTimeController.swift','WellbeingServices.swift','Design.swift','FocusView.swift','SleepView.swift','JourneyView.swift']]
 monitor=core+shared+['Monitor/ActivityMonitor.swift']
 refs={}
 for path in sorted(set(app+monitor)):
@@ -33,7 +33,7 @@ def configurations(name, values, base=False):
         if name=='project': v.update(SWIFT_OPTIMIZATION_LEVEL='-Onone' if mode=='Debug' else '-O',DEBUG_INFORMATION_FORMAT='dwarf' if mode=='Debug' else 'dwarf-with-dsym')
         configs.append(add(name+mode,'isa = XCBuildConfiguration; '+(f'baseConfigurationReference = {config}; ' if base else '')+f'buildSettings = {settings(v)}; name = {mode};'))
     return add(name+'configlist',f'isa = XCConfigurationList; buildConfigurations = {arr(configs)}; defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')
-projectconfig=configurations('project',dict(SDKROOT='iphoneos',IPHONEOS_DEPLOYMENT_TARGET='17.4',SWIFT_VERSION='5.0',CLANG_ENABLE_MODULES='YES',CODE_SIGN_STYLE='Automatic',CURRENT_PROJECT_VERSION='2',MARKETING_VERSION='1.1',TARGETED_DEVICE_FAMILY='1'),True)
+projectconfig=configurations('project',dict(SDKROOT='iphoneos',IPHONEOS_DEPLOYMENT_TARGET='17.4',SWIFT_VERSION='5.0',CLANG_ENABLE_MODULES='YES',CODE_SIGN_STYLE='Automatic',CURRENT_PROJECT_VERSION='3',MARKETING_VERSION='1.2',TARGETED_DEVICE_FAMILY='1'),True)
 embedbuild=add('embedbuild',f'isa = PBXBuildFile; fileRef = {product_ext}; settings = {{ATTRIBUTES = (RemoveHeadersOnCopy,);}};')
 embed=add('embed',f'isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = ""; dstSubfolderSpec = 13; files = ({embedbuild},); name = "Embed App Extensions"; runOnlyForDeploymentPostprocessing = 0;')
 proxy=add('proxy',f'isa = PBXContainerItemProxy; containerPortal = {oid("project")}; proxyType = 1; remoteGlobalIDString = {oid("UnscrollMonitor")}; remoteInfo = UnscrollMonitor;')
@@ -46,7 +46,7 @@ for name, paths, product, bundle, info, entitlements in [
     frameworks=add(name+'frameworks','isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;')
     resources=add(name+'resources',f'isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = {arr([assetbuild] if name=="Unscroll" else [])}; runOnlyForDeploymentPostprocessing = 0;')
     values=dict(PRODUCT_BUNDLE_IDENTIFIER=bundle,PRODUCT_NAME='$(TARGET_NAME)',INFOPLIST_FILE=info,CODE_SIGN_ENTITLEMENTS=entitlements,GENERATE_INFOPLIST_FILE='NO',LD_RUNPATH_SEARCH_PATHS='$(inherited) @executable_path/Frameworks'+(' @executable_path/../../Frameworks' if name!='Unscroll' else ''),SUPPORTED_PLATFORMS='iphoneos iphonesimulator')
-    values.update(CURRENT_PROJECT_VERSION='2', MARKETING_VERSION='1.1')
+    values.update(CURRENT_PROJECT_VERSION='3', MARKETING_VERSION='1.2')
     if name!='Unscroll': values.update(APPLICATION_EXTENSION_API_ONLY='YES',SKIP_INSTALL='YES')
     conf=configurations(name,values)
     phases=[sources,frameworks,resources]+([embed] if name=='Unscroll' else [])
@@ -57,6 +57,7 @@ add('project',f'isa = PBXProject; attributes = {{BuildIndependentTargetsInParall
 base=dict(CFBundleDevelopmentRegion='de',CFBundleExecutable='$(EXECUTABLE_NAME)',CFBundleIdentifier='$(PRODUCT_BUNDLE_IDENTIFIER)',CFBundleInfoDictionaryVersion='6.0',CFBundleName='$(PRODUCT_NAME)',CFBundleShortVersionString='$(MARKETING_VERSION)',CFBundleVersion='$(CURRENT_PROJECT_VERSION)',UnscrollAppGroup='$(UNSCROLL_APP_GROUP)')
 appinfo=dict(base,CFBundlePackageType='APPL',CFBundleDisplayName='Unscroll',LSRequiresIPhoneOS=True,NSCameraUsageDescription='Unscroll erkennt Liegestütze, Kniebeugen und Plank auf deinem iPhone. Kamerabilder werden nicht gespeichert.',UILaunchScreen={},UISupportedInterfaceOrientations=['UIInterfaceOrientationPortrait'],ITSAppUsesNonExemptEncryption=False)
 appinfo = dict(original['info'], **appinfo)
+appinfo.update(NSMotionUsageDescription='Unscroll zählt deine Schritte, um dir Zeitguthaben gutzuschreiben.', NSGKFriendListUsageDescription='Unscroll zeigt deine Game-Center-Freunde zum gemeinsamen Dranbleiben.', UIBackgroundModes=['audio'])
 extinfo=dict(base,CFBundlePackageType='XPC!',NSExtension=dict(NSExtensionPointIdentifier='com.apple.deviceactivity.monitor-extension',NSExtensionPrincipalClass='$(PRODUCT_MODULE_NAME).ActivityMonitor'))
 for path,data in [('Unscroll/Info.plist',appinfo),('Monitor/Info.plist',extinfo)]: (root/path).write_bytes(plistlib.dumps(data))
 ent={'com.apple.developer.family-controls':True,'com.apple.security.application-groups':['$(UNSCROLL_APP_GROUP)']}

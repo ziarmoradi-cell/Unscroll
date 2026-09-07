@@ -35,8 +35,8 @@ struct WorkoutView: View {
                         Text("Aktuelle Haltung: \(Int(progress.currentHold)) s · 10 s = 1 Minute")
                         ProgressView(value: progress.plankSeconds.truncatingRemainder(dividingBy: 10), total: 10)
                     } else { Text("Pro Wiederholung: \(reward) Sekunden Social Media") }
-                    Label("PR: \(Int(max(baseline, recordValue))) \(exercise == .plank ? "Sekunden am Stück" : "Wiederholungen")", systemImage: "trophy.fill").foregroundStyle(.mint)
-                    if celebrated { Text("Neuer persönlicher Rekord! 🎉").font(.headline).foregroundStyle(.mint) }
+                    Label("PR: \(Int(max(baseline, recordValue))) \(exercise == .plank ? "Sekunden am Stück" : "Wiederholungen")", systemImage: "trophy.fill").foregroundStyle(Palette.teal)
+                    if celebrated { Text("Neuer persönlicher Rekord! 🎉").font(.headline).foregroundStyle(Palette.teal) }
                     Text("Handy aufrecht und stabil aufstellen. Trainiere seitlich zur Frontkamera, mit ganzem Körper im Bild. Kamera bleibt auf deinem iPhone.").font(.footnote).foregroundStyle(.secondary)
                     if !camera.running {
                         Button(started ? "Kamera erneut starten" : "Training starten") { start() }.buttonStyle(.borderedProminent)
@@ -46,7 +46,7 @@ struct WorkoutView: View {
                     }
                     Button("Training beenden") { finish(); dismiss() }.buttonStyle(.bordered)
                 }.padding()
-            }.navigationTitle(exercise.title)
+            }.page().navigationTitle(exercise.title)
                 .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Fertig") { finish(); dismiss() } } }
         }
         .interactiveDismissDisabled(camera.running)
