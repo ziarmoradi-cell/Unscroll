@@ -32,7 +32,7 @@ def configurations(name, values, base=False):
     for mode in ['Debug','Release']:
         v=dict(original.get(name, {}).get(mode, {}))
         v.update(values)
-        if name=='project': v.update(SWIFT_OPTIMIZATION_LEVEL='-Onone' if mode=='Debug' else '-O',DEBUG_INFORMATION_FORMAT='dwarf' if mode=='Debug' else 'dwarf-with-dsym')
+        if name=='project': v.update(SWIFT_OPTIMIZATION_LEVEL='-Onone' if mode=='Debug' else '-O',DEBUG_INFORMATION_FORMAT='dwarf' if mode=='Debug' else 'dwarf-with-dsym',SWIFT_ACTIVE_COMPILATION_CONDITIONS='DEBUG' if mode=='Debug' else '')
         configs.append(add(name+mode,'isa = XCBuildConfiguration; '+(f'baseConfigurationReference = {config}; ' if base else '')+f'buildSettings = {settings(v)}; name = {mode};'))
     return add(name+'configlist',f'isa = XCConfigurationList; buildConfigurations = {arr(configs)}; defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')
 projectconfig=configurations('project',dict(SDKROOT='iphoneos',IPHONEOS_DEPLOYMENT_TARGET='17.4',SWIFT_VERSION='5.0',CLANG_ENABLE_MODULES='YES',CODE_SIGN_STYLE='Automatic',CURRENT_PROJECT_VERSION='3',MARKETING_VERSION='1.2',TARGETED_DEVICE_FAMILY='1'),True)

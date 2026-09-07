@@ -2,6 +2,11 @@ import XCTest
 @testable import UnscrollCore
 
 final class WellbeingTests: XCTestCase {
+    func testReopeningIntroDoesNotBypassDailyLimit() {
+        var ledger = Ledger(); ledger.life.profile.dailyBudget = 10
+        ledger.life.profile.completedIntro = false
+        XCTAssertEqual(ledger.dailyAvailableSeconds(), 600)
+    }
     func testStepsNeverDoubleCreditOrExceedDailyCap() {
         var ledger = Ledger()
         XCTAssertEqual(ledger.claimSteps(total: 999, day: "a"), 0)

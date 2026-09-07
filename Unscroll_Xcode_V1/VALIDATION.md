@@ -1,47 +1,47 @@
-# Verification performed on 6 September 2026
+# Unscroll 1.2 – validation
 
-## Passed
+## Automated gates
 
-- Swift 6.1.2 frontend parsed all app, monitor and core Swift source files.
-- 13 core test methods executed with actual Swift source and synthetic pose fixtures;
-  all assertions passed. The synchronous adapter `scripts/run_core_checks.py` was used.
-  It changes only the XCTest runner/assertion surface, not production code or test bodies.
-- OpenStep parser accepted the Xcode project; referenced source files exist; app and
-  embedded monitor targets, entitlements, Info.plists and shared scheme are structurally valid.
+The GitHub workflow builds the native app and embedded monitor with Xcode 26.3 and
+runs the core Swift package. It also installs and launches the unsigned simulator app
+and captures onboarding plus all five main tabs using isolated, empty test data.
 
-The tests cover complete push-up and squat cycles; no duplicate count while holding;
-standing rejection; plank stop/resume and continuous PR; camera gaps/background;
-occlusion and multiple people; single-frame jitter; mirrored geometry; 10-second
-reward boundaries; idempotent saves; persisted and exercise-specific PRs; insufficient
-balance; one-time failed-reservation refunds; stale callback and stale save handling.
+Core tests cover complete push-up/squat cycles, missing frames, pose loss, multiple people,
+mirroring, jitter, valid plank duration and continuous PR, reward boundaries, stale callbacks,
+idempotent checkpoints, old-ledger migration, step caps/deduplication, daily limits/refunds,
+strict pause expiry and interrupted focus. The final run link is recorded in the delivered update.
 
-## Runner limitation
+## Required physical-iPhone acceptance (not executed in the remote workspace)
 
-`swift test` could not complete in this container because SwiftPM/libdispatch encountered
-an environment-related runtime crash. A direct XCTest invocation reported 13 passes but
-also emitted runtime diagnostics. The final synchronous Swift adapter completed with
-exit code 0 and all 13 assertions groups passing, without runtime diagnostics.
+1. Install over the existing app with the same bundle ID. Check existing balance/PRs/history,
+   new onboarding, profile edits and relaunch persistence. Do not delete the installed app first.
+2. Grant camera access. Perform ten full push-ups and ten squats side-on in both directions.
+   Compare physical and counted reps. Repeat in different lighting; partial movements must not count.
+3. Plank: 9/10/19/20 valid seconds yield 0/1/1/2 minutes. 12 seconds, break, 8 seconds yields
+   about 20 total, PR about 12. Covered lens, posture loss and backgrounding pause counting.
+4. Beat a PR and relaunch; record, history and credit persist. Camera denial/retry must work.
+5. Connect motion permission and walk. Today's steps load; reopening never doubles rewards.
+   1,000 steps = 1 minute; cap 10 minutes/day. Verify day rollover and denied permission.
+6. Select social apps with FamilyControls. Redeem one minute; combined selected-app usage should
+   re-shield them, including while Unscroll is closed. Test failed setup, revocation and device reboot.
+7. Strict focus, night pause and hardcore detox prevent redemption and selection edits. Starting
+   these closes existing grants with disclosed forfeiture. Confirm early exit records interruption.
+   Normal detox respects the smaller of 30 minutes/day and personal allowance.
+8. Focus 15/25/50-minute end times survive backgrounding/relaunch. Finish early vs finish on time;
+   completed totals must differ. Check thought note persistence.
+9. Play each noise, adjust volume, lock the phone, wait for timer expiry. Audio must stop;
+   calls/audio interruptions must stop sound cleanly. Switching sections must not start a second player.
+10. iOS 26+: allow AlarmKit. Schedule a near alarm; test with app terminated, locked phone, silent
+    mode and Focus. Test a full 30-minute pair: stopping the early chime leaves the final alarm;
+    cancelling in Unscroll removes both. Denied authorization and changed alarm date must surface honestly.
+    Earlier iOS: verify explicit reminder-only copy; use Apple's Clock for reliable waking.
+11. Enable Game Center in App Store Connect, authenticate two real accounts, send an invitation
+    through Apple's sheet, accept, and refresh the friend list. ShareLink only sends after user action.
+12. Check large text, VoiceOver labels, small iPhone layouts, navigation and keyboard dismissal.
 
-## Not verified
+## Release boundary
 
-- Full iOS SDK type checking, Xcode simulator build, signing or archive validation.
-- Real camera pose accuracy, lighting, body-size variation, lifecycle UI or visual layout.
-- Real FamilyControls authorization, app shielding, OS usage callbacks or distribution approval.
-- Whether the uploaded App Store build uses this repository's starter source or later local changes.
-
-No real-iPhone tests have been performed and no recognition accuracy claim is made.
-This deliverable is source prepared for integration and device validation, not a tested release.
-
-## Integration of uploaded Mac project
-
-The supplied Mac project has now been merged. Original Swift files matched the starter.
-AppIcon PNG was preserved byte-for-byte (SHA-256
-`0d214d3189bf2b3e2c5eb5bb47f50e92a41b252d42ad119e550803073f6569aa`).
-Bundle ID, development team, Game Center, original compiler settings and iPhone/portrait
-configuration were carried forward. App and monitor use version 1.1 / build 2.
-Structural checks passed for both targets, source/resource paths, asset catalog,
-entitlements and build versions.
-
-The preceding implementation passed swift test and an unsigned app+monitor simulator
-build on GitHub run 34049335799. The PR Checks tab records validation of this newer
-integration commit; signing and real-device behavior still require testing on the Mac/iPhone.
+CI is an unsigned compiler/logic/render check, not proof of device recognition accuracy or signed
+capabilities. App Store upload, Apple review, Family Controls distribution permission, actual camera
+calibration, alarms and Game Center account checks remain device/account operations. No production
+screen-time baseline, sleep-stage inference, live friend exercise feed or unbypassable lockdown is claimed.

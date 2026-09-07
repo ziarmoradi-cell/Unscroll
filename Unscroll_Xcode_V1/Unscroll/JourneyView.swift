@@ -119,6 +119,7 @@ struct ProfileView: View {
         Form {
             Section("Dein Profil") {
                 TextField("Name", text: Binding(get: { store.ledger.life.profile.name }, set: { value in store.mutate { $0.life.profile.name = value } }))
+                TextField("Alter (optional)", text: Binding(get: { store.ledger.life.profile.age.map(String.init) ?? "" }, set: { value in store.mutate { $0.life.profile.age = Int(value).flatMap { (1...120).contains($0) ? $0 : nil } } })).keyboardType(.numberPad)
                 Picker("Ziel", selection: Binding(get: { store.ledger.life.profile.goal }, set: { value in store.mutate { $0.life.profile.goal = value } })) { ForEach(PersonalGoal.allCases) { Text($0.rawValue).tag($0) } }
                 Picker("Schwierigkeit", selection: Binding(get: { store.ledger.life.profile.difficulty }, set: { value in store.mutate { $0.life.profile.difficulty = value } })) { ForEach(Difficulty.allCases) { Text($0.rawValue).tag($0) } }
                 Stepper("Tageslimit: \(store.ledger.life.profile.dailyBudget) Min.", value: Binding(get: { store.ledger.life.profile.dailyBudget }, set: { value in store.mutate { $0.life.profile.dailyBudget = value } }), in: 5...120, step: 5)

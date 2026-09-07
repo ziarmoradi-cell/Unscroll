@@ -74,7 +74,8 @@ struct SleepView: View {
                     }
                 }.panel()
             }.padding(22)
-        }.page().toolbar(.hidden, for: .navigationBar).onAppear { alarm.refresh() }
+        }.page().toolbar(.hidden, for: .navigationBar).onAppear { alarm.refresh(); if let saved = UserDefaults.standard.object(forKey: "wakePreference") as? Date { wake = saved } }
+        .onChange(of: wake) { _, value in UserDefaults.standard.set(value, forKey: "wakePreference") }
         .confirmationDialog("Nachtpause vorzeitig beenden?", isPresented: $endNight, titleVisibility: .visible) {
             Button("Nachtpause beenden", role: .destructive) { store.mutate { $0.life.nightUntil = nil }; sound.stop() }
         }

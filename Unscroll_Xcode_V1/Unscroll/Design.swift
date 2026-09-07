@@ -12,9 +12,10 @@ extension View {
     func page() -> some View { frame(maxWidth: .infinity, maxHeight: .infinity).background(Palette.paper).foregroundStyle(Palette.ink) }
 }
 struct PrimaryButton: ButtonStyle {
+    @Environment(\.isEnabled) private var enabled
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.font(.headline).frame(maxWidth: .infinity).padding(.vertical, 17)
-            .foregroundStyle(.white).background(Palette.teal.opacity(configuration.isPressed ? 0.7 : 1), in: RoundedRectangle(cornerRadius: 18))
+            .foregroundStyle(.white).background(Palette.teal.opacity(!enabled ? 0.35 : configuration.isPressed ? 0.7 : 1), in: RoundedRectangle(cornerRadius: 18))
     }
 }
 struct PageHeading: View {
