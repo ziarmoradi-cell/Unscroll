@@ -35,6 +35,7 @@ struct PoseFrame {
     var left: BodySide?
     var right: BodySide?
     var people: Int = 1
+    var aspectRatio: Double = 1
 }
 
 struct WorkoutProgress {
@@ -43,6 +44,8 @@ struct WorkoutProgress {
     var currentHold: Double = 0
     var bestHold: Double = 0
     var validPose = false
+    var depth: Double = 0
+    var bodyDetected = false
     var message = "Stelle dich seitlich zur Kamera. Dein ganzer Körper muss sichtbar sein."
 }
 
@@ -52,11 +55,12 @@ struct PoseCounter {
     private(set) var progress = WorkoutProgress()
     private var lastTime: Double?
     private var phase = 0 // 0: needs start, 1: top armed, 2: bottom reached
-    private var phaseSince: Double?
+    private var endpointFrames = 0
     private var cycleStart: Double?
     private var side: Int?
     private var previousValid = false
     private var lastHip: Joint?
+    private var lastMovementAngle: Double?
 
     static func angle(_ a: Joint, _ b: Joint, _ c: Joint) -> Double {
         let denominator = a.distance(to: b) * c.distance(to: b)
@@ -66,9 +70,9 @@ struct PoseCounter {
     }
 
     mutating func interrupt() {
-        phase = 0; phaseSince = nil; cycleStart = nil; side = nil
-        previousValid = false; lastTime = nil; lastHip = nil
-        progress.currentHold = 0; progress.validPose = false
+        phase = 0; endpointFrames = 0; cycleStart = nil; side = nil
+        previousValid = false; lastTime = nil; lastHip = nil; lastMovementAngle = nil
+        progress.currentHold = 0; progress.validPose = false; progress.depth = 0; progress.bodyDetected = false
         progress.message = "Pausiert – bring deinen ganzen Körper ins Bild."
     }
 
@@ -82,14 +86,32 @@ struct PoseCounter {
             return progress
         }
         let candidates = [frame.left, frame.right]
-        if side == nil {
-            side = (frame.left?.confidence ?? 0) >= (frame.right?.confidence ?? 0) ? 0 : 1
+        func required(_ body: BodySide) -> [(String, Joint)] {
+            let base = [("Schulter", body.shoulder), ("Hüfte", body.hip), ("Knie", body.knee), ("Füße", body.ankle)]
+            return exercise == .squats ? base : base + [("Ellbogen", body.elbow), ("Hände", body.wrist)]
         }
-        guard let index = side, let body = candidates[index], body.confidence >= 0.6,
-              [body.shoulder, body.elbow, body.wrist, body.hip, body.knee, body.ankle].allSatisfy({ $0.x.isFinite && $0.y.isFinite }),
-              body.shoulder.distance(to: body.hip) > 0.08,
-              body.hip.distance(to: body.ankle) > 0.12 else {
-            interrupt(); progress.message = "Körper nicht vollständig sichtbar – etwas weiter zurück."
+        func quality(_ body: BodySide?) -> Double {
+            guard let body else { return 0 }
+            return required(body).map { $0.1.confidence }.min() ?? 0
+        }
+        let best = quality(frame.left) >= quality(frame.right) ? 0 : 1
+        if side == nil { side = best }
+        // Never join endpoints from different body sides in the same repetition.
+        if let current = side, quality(candidates[current]) < 0.25, quality(candidates[best]) >= 0.25 {
+            interrupt(); side = best; lastTime = frame.time
+        }
+        guard let index = side, let body = candidates[index] else {
+            interrupt(); progress.message = "Noch keine Körperpunkte – tritt ins Kamerabild und sorge für Licht."
+            return progress
+        }
+        let joints = required(body)
+        let missing = joints.filter { !$0.1.confidence.isFinite || $0.1.confidence < 0.25 || !$0.1.x.isFinite || !$0.1.y.isFinite }
+        guard missing.isEmpty else {
+            interrupt(); progress.message = "Noch nicht gut sichtbar: " + missing.map { $0.0 }.joined(separator: ", ") + ". Handy seitlich aufstellen."
+            return progress
+        }
+        guard body.shoulder.distance(to: body.hip) > 0.035, body.hip.distance(to: body.ankle) > 0.07 else {
+            interrupt(); progress.message = "Etwas näher zur Kamera – dein Körper ist noch sehr klein im Bild."
             return progress
         }
         if let lastHip, lastHip.distance(to: body.hip) > 0.18 {
@@ -100,34 +122,39 @@ struct PoseCounter {
         let hipAngle = Self.angle(body.shoulder, body.hip, body.knee)
         let kneeAngle = Self.angle(body.hip, body.knee, body.ankle)
         let elbowAngle = Self.angle(body.shoulder, body.elbow, body.wrist)
-        let horizontal = abs(body.shoulder.y - body.ankle.y) < abs(body.shoulder.x - body.ankle.x) * 0.4
-        let straight = hipAngle >= 155 && kneeAngle >= 155
-        let armSupport = body.elbow.y < body.shoulder.y && body.wrist.y < body.shoulder.y
+        let horizontal = abs(body.shoulder.y - body.ankle.y) < abs(body.shoulder.x - body.ankle.x) * 0.8
+        let straight = hipAngle >= 145 && kneeAngle >= 150
+        let armSupport = body.wrist.y < body.shoulder.y - 0.015
         let valid: Bool
         let top: Bool
         let bottom: Bool
         switch exercise {
         case .pushUps:
             valid = horizontal && straight && armSupport
-            top = elbowAngle > 150
-            bottom = elbowAngle < 100
+            top = elbowAngle >= 150
+            bottom = elbowAngle <= 100
         case .squats:
             valid = body.shoulder.y > body.hip.y && body.hip.y > body.ankle.y &&
-                body.shoulder.y - body.hip.y > abs(body.shoulder.x - body.hip.x) * 0.65
-            top = kneeAngle > 160 && hipAngle > 150
+                body.shoulder.y - body.hip.y > abs(body.shoulder.x - body.hip.x) * 0.2
+            top = kneeAngle >= 155 && hipAngle >= 145
             bottom = kneeAngle < 110 && body.hip.y - body.knee.y < body.hip.distance(to: body.knee) * 0.45
         case .plank:
-            let supportedElbow = abs(body.elbow.x - body.shoulder.x) < body.shoulder.distance(to: body.hip) * 0.45
-            let forearm = elbowAngle >= 65 && elbowAngle <= 120 && abs(body.wrist.y - body.elbow.y) < 0.10
+            let supportedElbow = abs(body.elbow.x - body.shoulder.x) < body.shoulder.distance(to: body.hip) * 0.8
+            let forearm = elbowAngle >= 55 && elbowAngle <= 125 && abs(body.wrist.y - body.elbow.y) < body.shoulder.distance(to: body.hip) * 0.6
             valid = horizontal && straight && armSupport && supportedElbow && (forearm || elbowAngle > 150)
             top = false; bottom = false
         }
         guard valid else {
             interrupt()
-            progress.message = exercise == .squats ? "Seitlich stehen, Füße und Oberkörper im Bild." : "Körper gerade halten, seitlich zur Kamera."
+            progress.bodyDetected = true
+            if exercise == .squats { progress.message = "Körper gefunden. Stelle die Kamera seitlich auf Hüfthöhe auf." }
+            else if !horizontal { progress.message = "Körper gefunden. Geh in die Stützposition; die Kamera schaut seitlich auf dich." }
+            else if !straight { progress.message = "Körper gefunden. Hüfte und Beine möglichst in einer Linie halten." }
+            else { progress.message = "Körper gefunden. Hände bzw. Unterarme unter den Oberkörper setzen." }
             return progress
         }
-        progress.validPose = true
+        progress.validPose = true; progress.bodyDetected = true
+        progress.depth = exercise == .pushUps ? max(0, min(1, (150-elbowAngle)/50)) : max(0, min(1, (155-kneeAngle)/45))
         if exercise == .plank {
             // Credit only intervals bounded by TWO valid frames. Never bridge a lost frame,
             // app suspension or invalid posture. No timer runs independently of the camera.
@@ -140,21 +167,30 @@ struct PoseCounter {
             progress.message = "Haltung erkannt – Zeit läuft."
             return progress
         }
-        if let cycleStart, frame.time - cycleStart > 12 { phase = 0; phaseSince = nil; self.cycleStart = nil }
+        if let cycleStart, frame.time - cycleStart > 12 { phase = 0; endpointFrames = 0; self.cycleStart = nil }
         let condition = phase == 1 ? bottom : top
-        if condition {
-            if phaseSince == nil { phaseSince = frame.time }
-            if frame.time - (phaseSince ?? frame.time) >= 0.15 {
-                if phase == 0 { phase = 1; cycleStart = frame.time }
-                else if phase == 1 { phase = 2 }
-                else {
-                    if frame.time - (cycleStart ?? frame.time) >= 0.8 { progress.reps += 1 }
-                    phase = 1; cycleStart = frame.time
-                }
-                phaseSince = nil
+        let movementAngle = exercise == .pushUps ? elbowAngle : kneeAngle
+        let previousAngle = lastMovementAngle
+        lastMovementAngle = movementAngle
+        // A single endpoint sample is enough when an adjacent intermediate angle
+        // confirms the trajectory. A direct top/bottom spike still needs two samples.
+        let approachingBottom = phase == 1 && bottom && previousAngle.map {
+            $0 > movementAngle && $0 < 145 && $0 - movementAngle <= 45
+        } == true
+        let approachingTop = phase == 2 && top && previousAngle.map {
+            $0 < movementAngle && $0 > 120 && movementAngle - $0 <= 45
+        } == true
+        endpointFrames = condition ? endpointFrames + 1 : 0
+        if endpointFrames >= 2 || approachingBottom || approachingTop {
+            if phase == 0 { phase = 1; cycleStart = frame.time }
+            else if phase == 1 { phase = 2 }
+            else {
+                if frame.time - (cycleStart ?? frame.time) >= 0.18 { progress.reps += 1 }
+                phase = 1; cycleStart = frame.time
             }
-        } else { phaseSince = nil }
-        progress.message = phase == 0 ? "Startposition halten." : phase == 1 ? "Kontrolliert absenken." : "Wieder vollständig hoch."
+            endpointFrames = 0
+        }
+        progress.message = phase == 0 ? "Einmal ganz nach oben – dann kann es losgehen." : phase == 1 ? "Tief runter – dein Tempo bestimmst du." : "Tiefe erreicht. Wieder ganz hoch!"
         return progress
     }
 }

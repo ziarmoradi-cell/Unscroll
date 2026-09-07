@@ -8,6 +8,8 @@ final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSamp
     let session = AVCaptureSession()
     @Published var problem: String?
     @Published var running = false
+    @Published private(set) var usingFront = true
+    private var position = AVCaptureDevice.Position.front
     var onFrame: ((PoseFrame) -> Void)?
     private let queue = DispatchQueue(label: "unscroll.camera", qos: .userInitiated)
     private var configured = false
@@ -64,9 +66,9 @@ final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSamp
     private func configure() throws {
         session.beginConfiguration(); defer { session.commitConfiguration() }
         session.inputs.forEach(session.removeInput); session.outputs.forEach(session.removeOutput)
-        session.sessionPreset = .high
-        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front) else {
-            throw NSError(domain: "Unscroll", code: 1, userInfo: [NSLocalizedDescriptionKey: "Keine Frontkamera verfügbar."])
+        session.sessionPreset = .hd1280x720
+        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position) else {
+            throw NSError(domain: "Unscroll", code: 1, userInfo: [NSLocalizedDescriptionKey: "Diese Kamera ist nicht verfügbar."])
         }
         let input = try AVCaptureDeviceInput(device: camera)
         guard session.canAddInput(input) else { throw StorageFailure.unavailable }
@@ -78,10 +80,17 @@ final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSamp
         guard session.canAddOutput(output) else { throw StorageFailure.unavailable }
         session.addOutput(output)
         if let connection = output.connection(with: .video) {
-            if connection.isVideoOrientationSupported { connection.videoOrientation = .portrait }
-            if connection.isVideoMirroringSupported { connection.isVideoMirrored = false }
+            if connection.isVideoRotationAngleSupported(90) { connection.videoRotationAngle = 90 }
+            if connection.isVideoMirroringSupported { connection.automaticallyAdjustsVideoMirroring = false; connection.isVideoMirrored = false }
         }
         configured = true
+    }
+    func switchCamera() {
+        dispatchPrecondition(condition: .onQueue(.main))
+        stop(); usingFront.toggle()
+        let next: AVCaptureDevice.Position = usingFront ? .front : .back
+        queue.async { [weak self] in self?.position = next; self?.configured = false }
+        start()
     }
     func stop() {
         dispatchPrecondition(condition: .onQueue(.main))
@@ -91,7 +100,7 @@ final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSamp
     }
     func captureOutput(_ output: AVCaptureOutput, didOutput buffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         let now = ProcessInfo.processInfo.systemUptime
-        guard now - lastFrameTime >= 1.0 / 15, let pixel = CMSampleBufferGetImageBuffer(buffer) else { return }
+        guard now - lastFrameTime >= 1.0 / 30, let pixel = CMSampleBufferGetImageBuffer(buffer) else { return }
         lastFrameTime = now
         let token = captureGeneration
         let request = VNDetectHumanBodyPoseRequest()
@@ -103,13 +112,14 @@ final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSamp
             if observations.count == 1, let observation = observations.first {
                 let points = try observation.recognizedPoints(.all)
                 let aspect = Double(CVPixelBufferGetWidth(pixel)) / Double(CVPixelBufferGetHeight(pixel))
+                result.aspectRatio = aspect
                 func joint(_ name: VNHumanBodyPoseObservation.JointName) -> Joint? {
                     guard let p = points[name] else { return nil }
                     return Joint(x: Double(p.location.x) * aspect, y: Double(p.location.y), confidence: Double(p.confidence))
                 }
                 func body(_ names: [VNHumanBodyPoseObservation.JointName]) -> BodySide? {
-                    let p = names.compactMap(joint)
-                    guard p.count == 6 else { return nil }
+                    // Missing hands must not hide otherwise usable squat joints or the overlay.
+                    let p = names.map { joint($0) ?? Joint(x: 0, y: 0, confidence: 0) }
                     return BodySide(shoulder: p[0], elbow: p[1], wrist: p[2], hip: p[3], knee: p[4], ankle: p[5])
                 }
                 result.left = body([.leftShoulder, .leftElbow, .leftWrist, .leftHip, .leftKnee, .leftAnkle])
@@ -133,13 +143,19 @@ private final class CameraSurface: UIView {
 }
 struct CameraPreview: UIViewRepresentable {
     let session: AVCaptureSession
+    var mirrored = true
     func makeUIView(context: Context) -> UIView {
         let view = CameraSurface(); view.preview.session = session; view.preview.videoGravity = .resizeAspect
-        if let c = view.preview.connection {
-            if c.isVideoOrientationSupported { c.videoOrientation = .portrait }
-            if c.isVideoMirroringSupported { c.isVideoMirrored = true }
-        }
+        configure(view)
         return view
     }
-    func updateUIView(_ uiView: UIView, context: Context) {}
+    func updateUIView(_ uiView: UIView, context: Context) {
+        if let view = uiView as? CameraSurface { configure(view) }
+    }
+    private func configure(_ view: CameraSurface) {
+        if let c = view.preview.connection {
+            if c.isVideoRotationAngleSupported(90) { c.videoRotationAngle = 90 }
+            if c.isVideoMirroringSupported { c.automaticallyAdjustsVideoMirroring = false; c.isVideoMirrored = mirrored }
+        }
+    }
 }

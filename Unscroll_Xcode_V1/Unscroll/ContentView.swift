@@ -38,6 +38,7 @@ struct ContentView: View {
         .onAppear {
             refresh()
             #if DEBUG && targetEnvironment(simulator)
+            if ProcessInfo.processInfo.arguments.contains("--ui-screen=workout") { tab = 1; workout = .pushUps }
             let names = ["home", "move", "focus", "sleep", "more"]
             if let index = names.firstIndex(where: { ProcessInfo.processInfo.arguments.contains("--ui-screen=\($0)") }) { tab = index }
             #endif
@@ -117,7 +118,7 @@ struct ContentView: View {
                             Image(systemName: exercise.symbol).font(.title).foregroundStyle(Palette.teal).frame(width: 40)
                             VStack(alignment: .leading, spacing: 7) {
                                 Text(exercise.title).font(.title3.bold())
-                                Text(exercise == .plank ? "10 Sekunden = 1 Minute" : "1 Wiederholung = \(exercise == .pushUps ? store.ledger.pushUpSeconds : store.ledger.squatSeconds) Sekunden").font(.caption).foregroundStyle(.secondary)
+                                Text(exercise == .plank ? "10 Sekunden = 1 Minute" : "Guthaben pro Wiederholung: +\(exercise == .pushUps ? store.ledger.pushUpSeconds : store.ledger.squatSeconds) Sekunden").font(.caption).foregroundStyle(.secondary)
                                 Label("PR \(Int(store.ledger.record(exercise))) \(exercise == .plank ? "s am Stück" : "Wdh.")", systemImage: "trophy").font(.caption.bold()).foregroundStyle(Palette.teal)
                             }; Spacer(); Image(systemName: "arrow.up.right")
                         }.panel()

@@ -86,3 +86,89 @@ final class CounterTests: XCTestCase {
         XCTAssertEqual(c.progress.reps, 1)
     }
 }
+
+extension CounterTests {
+    func testFastFullRepsWithoutHoldingEndpoints() {
+        for exercise in [Exercise.pushUps, .squats] {
+            var counter = PoseCounter(exercise: exercise)
+            let up = exercise == .pushUps ? top : standing
+            let down = exercise == .pushUps ? bottom : squat
+            var time = 0.0
+            func frames(_ body: BodySide, _ count: Int) {
+                for _ in 0..<count { time += 1.0/30; counter.process(PoseFrame(time: time, left: body)) }
+            }
+            frames(up, 3)
+            for _ in 0..<5 {
+                frames(down, 5) // Less than the old required 150 ms stable dwell.
+                frames(up, 3)
+            }
+            XCTAssertEqual(counter.progress.reps, 5)
+        }
+    }
+    func testSquatDoesNotNeedVisibleHands() {
+        var up = standing; var down = squat
+        up.wrist.confidence = 0; up.elbow.confidence = 0
+        down.wrist.confidence = 0; down.elbow.confidence = 0
+        var counter = PoseCounter(exercise: .squats); var time = 0.0
+        feed(&counter, body: up, count: 3, time: &time)
+        feed(&counter, body: down, count: 3, time: &time)
+        feed(&counter, body: up, count: 3, time: &time)
+        XCTAssertEqual(counter.progress.reps, 1)
+    }
+    func testModerateConfidenceBodyCanBeRecognized() {
+        var body = top
+        body.wrist.confidence = 0.35; body.ankle.confidence = 0.4
+        var counter = PoseCounter(exercise: .plank); var time = 0.0
+        feed(&counter, body: body, count: 11, time: &time)
+        XCTAssertTrue(counter.progress.validPose)
+        XCTAssertEqual(counter.progress.plankSeconds, 1, accuracy: 0.001)
+    }
+    func testShallowFastPushUpsNeverCount() {
+        var counter = PoseCounter(exercise: .pushUps); var time = 0.0
+        var shallow = top; shallow.elbow.x = 0.20
+        feed(&counter, body: top, count: 3, time: &time)
+        for _ in 0..<10 {
+            feed(&counter, body: shallow, count: 3, time: &time)
+            feed(&counter, body: top, count: 3, time: &time)
+        }
+        XCTAssertEqual(counter.progress.reps, 0)
+    }
+    func testObscuredSupportingHandStillPausesPlank() {
+        var counter = PoseCounter(exercise: .plank); var time = 0.0
+        feed(&counter, body: top, count: 11, time: &time)
+        var hidden = top; hidden.wrist.confidence = 0
+        feed(&counter, body: hidden, count: 11, time: &time)
+        XCTAssertEqual(counter.progress.plankSeconds, 1, accuracy: 0.001)
+        XCTAssertEqual(counter.progress.currentHold, 0)
+    }
+    func testOverlayMatchesAspectFitAndFrontCameraMirror() {
+        let joint = Joint(x: 0.125, y: 0.75)
+        let front = PreviewProjection.point(joint, aspect: 0.5, width: 300, height: 400, mirrored: true)
+        let rear = PreviewProjection.point(joint, aspect: 0.5, width: 300, height: 400, mirrored: false)
+        XCTAssertEqual(front.x, 200, accuracy: 0.001)
+        XCTAssertEqual(rear.x, 100, accuracy: 0.001)
+        XCTAssertEqual(front.y, 100, accuracy: 0.001)
+        let letterbox = PreviewProjection.point(Joint(x: 0.5, y: 1), aspect: 1, width: 300, height: 500, mirrored: false)
+        XCTAssertEqual(letterbox.x, 150, accuracy: 0.001)
+        XCTAssertEqual(letterbox.y, 100, accuracy: 0.001)
+    }
+}
+
+extension CounterTests {
+    func testFastTrajectoryCountsWithOnlyOneSampleAtEachEndpoint() {
+        var counter = PoseCounter(exercise: .pushUps)
+        var time = 0.0
+        func sample(_ degrees: Double) {
+            var body = top
+            let a = degrees * Double.pi / 180
+            body.wrist = Joint(x: body.elbow.x + sin(a) * 0.2, y: body.elbow.y + cos(a) * 0.2)
+            time += 1.0 / 30
+            counter.process(PoseFrame(time: time, left: body))
+        }
+        sample(170); sample(170)
+        for _ in 0..<5 {
+            for angle in [140.0, 115, 95, 115, 140, 165] { sample(angle) }
+        }
+        XCTAssertEqual(counter.progress.reps, 5)
+    }
+}
