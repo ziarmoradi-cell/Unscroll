@@ -65,6 +65,14 @@ struct ContentView: View {
                     Metric(value: "\(store.ledger.life.stepTotals[Ledger.dayKey()] ?? 0)", title: "Schritte heute", symbol: "figure.walk")
                     Metric(value: "\(store.ledger.focusMinutes()) min", title: "Fokus heute", symbol: "scope")
                 }
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Dein Tagesziel").font(.headline)
+                    let reps = store.ledger.workouts.filter { Ledger.dayKey($0.date) == Ledger.dayKey() }.reduce(0) { $0 + $1.reps }
+                    let goal = store.ledger.life.profile.difficulty.repGoal
+                    HStack { Text("\(reps) / \(goal) Wiederholungen"); Spacer(); Image(systemName: reps >= goal ? "checkmark.circle.fill" : "figure.strengthtraining.traditional").foregroundStyle(Palette.teal) }
+                    ProgressView(value: Double(min(reps, goal)), total: Double(goal))
+                    Text(store.ledger.life.profile.goal.rawValue + " · " + store.ledger.life.profile.difficulty.rawValue).font(.caption).foregroundStyle(.secondary)
+                }.panel()
                 socialCard
                 VStack(alignment: .leading, spacing: 12) {
                     Label("Dein kleiner Impuls", systemImage: "lightbulb").font(.headline)

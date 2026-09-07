@@ -76,7 +76,7 @@ struct IntroView: View {
                 }
                 Button(page == 3 ? "Mein neues Kapitel starten" : "Weiter") {
                     if page < 3 { withAnimation { page += 1 } }
-                    else { profile.name = profile.name.trimmingCharacters(in: .whitespacesAndNewlines); profile.age = Int(age); profile.completedIntro = true; store.mutate { $0.life.profile = profile } }
+                    else { profile.name = profile.name.trimmingCharacters(in: .whitespacesAndNewlines); profile.age = Int(age).flatMap { (1...120).contains($0) ? $0 : nil }; profile.completedIntro = true; store.mutate { $0.life.profile = profile } }
                 }.buttonStyle(PrimaryButton()).disabled(page == 1 && profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 if page > 0 { Button("Zurück") { withAnimation { page -= 1 } }.frame(maxWidth: .infinity) }
             }.padding(26)

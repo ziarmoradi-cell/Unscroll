@@ -26,6 +26,8 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAlarmKitUsageDescription</key>
+	<string>Unscroll weckt dich zu deiner gewählten Aufstehzeit mit einem sanften Start und einem zweiten Alarm.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Unscroll erkennt Liegestütze, Kniebeugen und Plank auf deinem iPhone. Kamerabilder werden nicht gespeichert.</string>
 	<key>NSGKFriendListUsageDescription</key>

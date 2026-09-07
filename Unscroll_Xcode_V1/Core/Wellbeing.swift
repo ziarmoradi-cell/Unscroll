@@ -69,7 +69,7 @@ extension Ledger {
         return (life.nightUntil ?? .distantPast) > now
     }
     func dailyAvailableSeconds(at now: Date = Date()) -> Int {
-        var limit = life.profile.completedIntro ? life.profile.dailyBudget : 120
+        var limit = max(0, life.profile.dailyBudget)
         if let p = life.detox, p.active(at: now) { limit = min(limit, p.dailyLimit) }
         return max(0, limit * 60 - (life.redeemedSeconds[Self.dayKey(now)] ?? 0))
     }

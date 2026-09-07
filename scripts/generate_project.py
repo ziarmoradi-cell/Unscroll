@@ -11,7 +11,7 @@ def q(s): return json.dumps(str(s))
 def arr(items): return '(' + ','.join(items) + ',)' if items else '()'
 core=['Core/PoseCounter.swift','Core/Economy.swift','Core/Wellbeing.swift']
 shared=['Unscroll/SharedStorage.swift','Unscroll/ShieldPolicy.swift']
-app=core+shared+['Unscroll/'+x for x in ['AppStore.swift','UnscrollApp.swift','ContentView.swift','WorkoutView.swift','PoseCamera.swift','ScreenTimeController.swift','WellbeingServices.swift','Design.swift','FocusView.swift','SleepView.swift','JourneyView.swift']]
+app=core+shared+['Unscroll/'+x for x in ['AppStore.swift','UnscrollApp.swift','ContentView.swift','WorkoutView.swift','PoseCamera.swift','ScreenTimeController.swift','WellbeingServices.swift','Design.swift','FocusView.swift','SleepView.swift','JourneyView.swift','WakeAlarm.swift']]
 monitor=core+shared+['Monitor/ActivityMonitor.swift']
 refs={}
 for path in sorted(set(app+monitor)):
@@ -19,6 +19,8 @@ for path in sorted(set(app+monitor)):
 asset = add('asset', 'isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Unscroll/Asset.xcassets; sourceTree = "<group>";')
 assetbuild = add('assetbuild', f'isa = PBXBuildFile; fileRef = {asset};')
 refs['Unscroll/Asset.xcassets'] = asset
+privacy=add('privacy', 'isa = PBXFileReference; lastKnownFileType = text.xml; path = Unscroll/PrivacyInfo.xcprivacy; sourceTree = "<group>";')
+refs['Unscroll/PrivacyInfo.xcprivacy'] = privacy
 config=add('Config.xcconfig','isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>";')
 product_app=add('productapp','isa = PBXFileReference; explicitFileType = wrapper.application; path = Unscroll.app; sourceTree = BUILT_PRODUCTS_DIR;')
 product_ext=add('productext','isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; path = UnscrollMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR;')
@@ -44,7 +46,8 @@ for name, paths, product, bundle, info, entitlements in [
     builds=[add(name+p,f'isa = PBXBuildFile; fileRef = {refs[p]};') for p in paths]
     sources=add(name+'sources',f'isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = {arr(builds)}; runOnlyForDeploymentPostprocessing = 0;')
     frameworks=add(name+'frameworks','isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;')
-    resources=add(name+'resources',f'isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = {arr([assetbuild] if name=="Unscroll" else [])}; runOnlyForDeploymentPostprocessing = 0;')
+    privacybuild=add(name+'privacy', f'isa = PBXBuildFile; fileRef = {privacy};')
+    resources=add(name+'resources',f'isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = {arr(([assetbuild] if name=="Unscroll" else [])+[privacybuild])}; runOnlyForDeploymentPostprocessing = 0;')
     values=dict(PRODUCT_BUNDLE_IDENTIFIER=bundle,PRODUCT_NAME='$(TARGET_NAME)',INFOPLIST_FILE=info,CODE_SIGN_ENTITLEMENTS=entitlements,GENERATE_INFOPLIST_FILE='NO',LD_RUNPATH_SEARCH_PATHS='$(inherited) @executable_path/Frameworks'+(' @executable_path/../../Frameworks' if name!='Unscroll' else ''),SUPPORTED_PLATFORMS='iphoneos iphonesimulator')
     values.update(CURRENT_PROJECT_VERSION='3', MARKETING_VERSION='1.2')
     if name!='Unscroll': values.update(APPLICATION_EXTENSION_API_ONLY='YES',SKIP_INSTALL='YES')
@@ -57,7 +60,7 @@ add('project',f'isa = PBXProject; attributes = {{BuildIndependentTargetsInParall
 base=dict(CFBundleDevelopmentRegion='de',CFBundleExecutable='$(EXECUTABLE_NAME)',CFBundleIdentifier='$(PRODUCT_BUNDLE_IDENTIFIER)',CFBundleInfoDictionaryVersion='6.0',CFBundleName='$(PRODUCT_NAME)',CFBundleShortVersionString='$(MARKETING_VERSION)',CFBundleVersion='$(CURRENT_PROJECT_VERSION)',UnscrollAppGroup='$(UNSCROLL_APP_GROUP)')
 appinfo=dict(base,CFBundlePackageType='APPL',CFBundleDisplayName='Unscroll',LSRequiresIPhoneOS=True,NSCameraUsageDescription='Unscroll erkennt Liegestütze, Kniebeugen und Plank auf deinem iPhone. Kamerabilder werden nicht gespeichert.',UILaunchScreen={},UISupportedInterfaceOrientations=['UIInterfaceOrientationPortrait'],ITSAppUsesNonExemptEncryption=False)
 appinfo = dict(original['info'], **appinfo)
-appinfo.update(NSMotionUsageDescription='Unscroll zählt deine Schritte, um dir Zeitguthaben gutzuschreiben.', NSGKFriendListUsageDescription='Unscroll zeigt deine Game-Center-Freunde zum gemeinsamen Dranbleiben.', UIBackgroundModes=['audio'])
+appinfo.update(NSAlarmKitUsageDescription='Unscroll weckt dich zu deiner gewählten Aufstehzeit mit einem sanften Start und einem zweiten Alarm.', NSMotionUsageDescription='Unscroll zählt deine Schritte, um dir Zeitguthaben gutzuschreiben.', NSGKFriendListUsageDescription='Unscroll zeigt deine Game-Center-Freunde zum gemeinsamen Dranbleiben.', UIBackgroundModes=['audio'])
 extinfo=dict(base,CFBundlePackageType='XPC!',NSExtension=dict(NSExtensionPointIdentifier='com.apple.deviceactivity.monitor-extension',NSExtensionPrincipalClass='$(PRODUCT_MODULE_NAME).ActivityMonitor'))
 for path,data in [('Unscroll/Info.plist',appinfo),('Monitor/Info.plist',extinfo)]: (root/path).write_bytes(plistlib.dumps(data))
 ent={'com.apple.developer.family-controls':True,'com.apple.security.application-groups':['$(UNSCROLL_APP_GROUP)']}

@@ -4,6 +4,7 @@ struct SleepView: View {
     @EnvironmentObject var store: AppStore
     @EnvironmentObject var screenTime: ScreenTimeController
     @EnvironmentObject var sound: SoundPlayer
+    @StateObject private var alarm = WakeAlarm()
     @State private var wake = Calendar.current.date(bySettingHour: 7, minute: 0, second: 0, of: Date()) ?? Date()
     @State private var selectedSound = Soundscape.ocean
     @State private var soundMinutes = 30
@@ -32,7 +33,13 @@ struct SleepView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     Label("Dein Morgen", systemImage: "sunrise").font(.title3.bold())
                     DatePicker("Spätestens aufstehen", selection: $wake, displayedComponents: .hourAndMinute)
-                    Text("30-Minuten-Fenster: ein sanfter Hinweis zum Start und ein zweiter zur Aufstehzeit. Keine Schlafphasenmessung.").font(.subheadline).foregroundStyle(.secondary)
+                    Text(alarm.supported ? "Sanfter Ton 30 Minuten vorher, Systemalarm zur Aufstehzeit. Beide Alarme lassen sich einzeln stoppen. Keine Schlafphasenmessung." : "30-Minuten-Fenster: ein sanfter Hinweis zum Start und ein zweiter zur Aufstehzeit. Keine Schlafphasenmessung.").font(.subheadline).foregroundStyle(.secondary)
+                    if alarm.supported {
+                        if let date = alarm.scheduled { Label("Aktiv: " + date.formatted(date: .abbreviated, time: .shortened), systemImage: "alarm.fill").font(.subheadline) }
+                        Button("Systemwecker setzen") { Task { await alarm.schedule(at: wakeDate) } }.buttonStyle(PrimaryButton()).disabled(alarm.busy)
+                        if alarm.scheduled != nil { Button("Beide Wecker löschen") { alarm.cancel() } }
+                        if let message = alarm.message { Text(message).font(.caption).foregroundStyle(.secondary) }
+                    } else {
                     Button("Morgen-Erinnerungen setzen") {
                         let end = wakeDate
                         Task {
@@ -46,7 +53,8 @@ struct SleepView: View {
                     }.buttonStyle(.bordered)
                     Button("Erinnerungen löschen") { ReminderService.cancel("wake-soft"); ReminderService.cancel("wake-final"); message = "Morgen-Erinnerungen gelöscht." }
                     if let message { Text(message).font(.caption) }
-                    Text("Wichtig: Dies sind Benachrichtigungen, kein verlässlicher Wecker. Lautlos und Fokus können sie unterdrücken. Stelle deinen Wecker zusätzlich in Apples Uhr-App.").font(.caption).foregroundStyle(.secondary)
+                    Text("Wichtig: Dies sind Benachrichtigungen, kein verlässlicher Wecker. Lautlos und Fokus können sie unterdrücken. Stelle deinen Wecker zusätzlich in Apples Uhr-App. Der Systemwecker in Unscroll benötigt iOS 26 und einen Build mit Xcode 26 oder neuer.").font(.caption).foregroundStyle(.secondary)
+                    }
                 }.panel()
                 VStack(alignment: .leading, spacing: 14) {
                     Text("Klang zum Abschalten").font(.headline)
@@ -66,7 +74,7 @@ struct SleepView: View {
                     }
                 }.panel()
             }.padding(22)
-        }.page().toolbar(.hidden, for: .navigationBar)
+        }.page().toolbar(.hidden, for: .navigationBar).onAppear { alarm.refresh() }
         .confirmationDialog("Nachtpause vorzeitig beenden?", isPresented: $endNight, titleVisibility: .visible) {
             Button("Nachtpause beenden", role: .destructive) { store.mutate { $0.life.nightUntil = nil }; sound.stop() }
         }

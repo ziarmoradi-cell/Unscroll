@@ -109,7 +109,7 @@ enum Soundscape: String, CaseIterable, Identifiable {
     static func cancel(_ id: String) { UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id]) }
 }
 
-@MainActor final class FriendsManager: NSObject, ObservableObject, GKFriendRequestComposeViewControllerDelegate {
+@MainActor final class FriendsManager: NSObject, ObservableObject {
     @Published var friends: [GKPlayer] = []
     @Published var authenticated = false
     @Published var message = "Verbinde Game Center, um mit Freunden dranzubleiben."
@@ -138,16 +138,18 @@ enum Soundscape: String, CaseIterable, Identifiable {
     }
     func addFriend() {
         guard authenticated else { connect(); return }
-        guard GKFriendRequestComposeViewController.canSendFriendRequests() else { message = "Freundschaftsanfragen sind für diesen Account nicht verfügbar."; return }
-        let controller = GKFriendRequestComposeViewController(); controller.composeViewDelegate = self; present(controller)
+        guard let root = rootController() else { message = "Bitte versuche es erneut."; return }
+        do { try GKLocalPlayer.local.presentFriendRequestCreator(from: root) }
+        catch { message = error.localizedDescription }
     }
-    func friendRequestComposeViewControllerDidFinish(_ viewController: GKFriendRequestComposeViewController) {
-        viewController.dismiss(animated: true) { [weak self] in self?.refresh() }
+    private func rootController() -> UIViewController? {
+        guard let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
+              var root = scene.windows.first(where: \.isKeyWindow)?.rootViewController else { return nil }
+        while let next = root.presentedViewController { root = next }
+        return root
     }
     private func present(_ controller: UIViewController) {
-        guard let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
-              var root = scene.windows.first(where: \.isKeyWindow)?.rootViewController else { message = "Bitte versuche es erneut."; return }
-        while let next = root.presentedViewController { root = next }
+        guard let root = rootController() else { message = "Bitte versuche es erneut."; return }
         root.present(controller, animated: true)
     }
 }

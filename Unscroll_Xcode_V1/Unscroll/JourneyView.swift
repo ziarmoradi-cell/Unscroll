@@ -61,7 +61,7 @@ struct JourneyView: View {
         HStack(spacing: 14) { Image(systemName: icon).font(.title2).foregroundStyle(Palette.teal); VStack(alignment: .leading, spacing: 6) { Text(title).font(.headline); Text(detail).font(.caption).foregroundStyle(.secondary) }; Spacer(); Image(systemName: "chevron.right").font(.caption) }.panel()
     }
     private func milestone(_ title: String, achieved: Bool) -> some View {
-        Label(title, systemImage: achieved ? "checkmark.seal.fill" : "seal").foregroundStyle(achieved ? Palette.teal : .secondary)
+        Label(title, systemImage: achieved ? "checkmark.seal.fill" : "seal").foregroundStyle(achieved ? Palette.teal : Color.secondary)
     }
 }
 struct FriendsView: View {
