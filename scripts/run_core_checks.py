@@ -18,6 +18,12 @@ func XCTAssertNil<T>(_ value: T?, file: StaticString = #filePath, line: UInt = #
     if value != nil { fatalError("Expected nil at \\(file):\\(line)") }
 }
 '''
+s += r"""
+func XCTAssertTrue(_ value: Bool) { if !value { fatalError("Expected true") } }
+func XCTAssertFalse(_ value: Bool) { if value { fatalError("Expected false") } }
+func XCTAssertNotNil<T>(_ value: T?) { if value == nil { fatalError("Expected non-nil") } }
+func XCTUnwrap<T>(_ value: T?) throws -> T { guard let value else { fatalError("Expected non-nil") }; return value }
+"""
 s+='\n'.join(p.read_text() for p in sorted((root/'Core').glob('*.swift')))
 calls=[]
 for p in sorted((root/'Tests/UnscrollCoreTests').glob('*.swift')):
