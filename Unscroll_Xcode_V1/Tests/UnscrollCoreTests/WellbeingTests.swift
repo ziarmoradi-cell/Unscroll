@@ -69,3 +69,15 @@ final class WellbeingTests: XCTestCase {
         XCTAssertEqual(ledger.dailyAvailableSeconds(at: now), 600)
     }
 }
+
+extension WellbeingTests {
+    func testDifficultyOverridesLegacyRewardWithoutChangingBalance() throws {
+        var ledger = Ledger(); ledger.pushUpSeconds = 15; ledger.squatSeconds = 15; ledger.balanceSeconds = 420
+        for (difficulty, seconds) in [(Difficulty.gentle, 15), (.balanced, 30), (.ambitious, 60)] {
+            ledger.life.profile.difficulty = difficulty
+            let restored = try JSONDecoder().decode(Ledger.self, from: JSONEncoder().encode(ledger))
+            XCTAssertEqual(restored.repetitionReward, seconds)
+            XCTAssertEqual(restored.balanceSeconds, 420)
+        }
+    }
+}

@@ -1,4 +1,4 @@
-# Unscroll 1.2.1 – dein vollständiges Update
+# Unscroll 1.2.2 – dein vollständiges Update
 
 Diese ZIP enthält das ganze Xcode-Projekt. Du musst keine einzelnen Code-Dateien in dein altes Projekt kopieren.
 
@@ -19,14 +19,14 @@ Diese ZIP enthält das ganze Xcode-Projekt. Du musst keine einzelnen Code-Dateie
 
 ## Belohnungen
 
-- Liegestütz / Kniebeuge: vorhandene Belohnungseinstellung bleibt erhalten, standardmäßig 30 Sekunden pro Wiederholung.
+- Liegestütz / Kniebeuge: Sanft 15 Sekunden, Ausgewogen 30 Sekunden, Ambitioniert (schwer) 1 Minute pro Wiederholung. Die Schwierigkeit findest du im Profil.
 - Plank: 10 gültig erkannte Sekunden ergeben 1 Minute. Unterbrechungen pausieren die Gesamtzeit und beenden die laufende PR-Haltung.
 - Schritte: 1.000 Schritte ergeben 1 Minute, maximal 10 Minuten pro Tag. Beim Öffnen werden heutige iPhone-Schritte nachgeladen. Apple-Watch-/Health-Daten werden nicht importiert.
 - Tageslimit: begrenzt das Einlösen, nicht das Sammeln. Fokus, Nachtpause und Hardcore-Detox pausieren das Einlösen vollständig.
 
 ## Update auf TestFlight / App Store hochladen
 
-1. Version ist **1.2.1**, Build **4**. Wenn Build 4 bereits hochgeladen wurde, bei beiden Targets dieselbe höhere Build-Nummer einstellen.
+1. Version ist **1.2.2**, Build **5**. Wenn Build 5 bereits hochgeladen wurde, bei beiden Targets dieselbe höhere Build-Nummer einstellen.
 2. Für beide Targets müssen **App Groups** (`group.com.ziar.unscroll`) und **Family Controls** in den Apple-Profilen freigegeben sein. Distribution benötigt Apples Freigabe für Family Controls. Game Center im bestehenden App-Store-Connect-Eintrag aktivieren, damit Freunde funktionieren.
 3. Zuerst auf dem echten iPhone die Punkte aus `VALIDATION.md` prüfen.
 4. In Xcode **Any iOS Device (arm64)** wählen → **Product → Archive** → im Organizer **Distribute App → App Store Connect → Upload**.

@@ -19,7 +19,7 @@ import DeviceActivity
         do {
             try SharedStorage.transaction { ledger in
                 if let data = ledger.selectionData { selection = try JSONDecoder().decode(FamilyActivitySelection.self, from: data) }
-                if let active = ledger.grant, active.expires <= Date() {
+                if let active = ledger.grant, active.expires <= Date() || ledger.restricted() {
                     try ShieldPolicy.block(ledger.selectionData); ledger.finishGrant(active.id)
                 }
                 grant = ledger.grant
@@ -30,9 +30,16 @@ import DeviceActivity
     var hasSelection: Bool { !selection.applicationTokens.isEmpty || !selection.categoryTokens.isEmpty || !selection.webDomainTokens.isEmpty }
 
     func saveSelection() {
+        error = nil
         do {
             try SharedStorage.transaction { ledger in
-                guard ledger.grant == nil && !ledger.restricted() else { throw ScreenTimeError.active }
+                guard approved, ledger.grant == nil else { throw ScreenTimeError.active }
+                if ledger.restricted(), let previous = ledger.selectionData {
+                    let old = try JSONDecoder().decode(FamilyActivitySelection.self, from: previous)
+                    guard old.applicationTokens.isSubset(of: selection.applicationTokens),
+                          old.categoryTokens.isSubset(of: selection.categoryTokens),
+                          old.webDomainTokens.isSubset(of: selection.webDomainTokens) else { throw ScreenTimeError.active }
+                }
                 let data = try JSONEncoder().encode(selection)
                 try ShieldPolicy.block(data); ledger.selectionData = data
             }
@@ -80,7 +87,26 @@ import DeviceActivity
         refresh()
     }
 
+    func startDetox(days: Int, hard: Bool) {
+        error = nil
+        guard approved else { error = "Verbinde zuerst Bildschirmzeit unter App-Pakete."; return }
+        do {
+            try SharedStorage.transaction { ledger in
+                guard let data = ledger.selectionData else { throw ScreenTimeError.noApps }
+                let saved = try JSONDecoder().decode(FamilyActivitySelection.self, from: data)
+                guard !saved.applicationTokens.isEmpty || !saved.categoryTokens.isEmpty else { throw ScreenTimeError.noApps }
+                try ShieldPolicy.block(data)
+                if let id = ledger.grant?.id { ledger.finishGrant(id) }
+                let now = Date()
+                ledger.life.detox = DetoxPlan(start: now, end: Calendar.current.date(byAdding: .day, value: days, to: now)!, days: days, hard: hard)
+            }
+            center.stopMonitoring()
+        } catch { self.error = error.localizedDescription }
+        refresh()
+    }
+
     func blockNow() {
+        error = nil
         do {
             try SharedStorage.transaction { ledger in
                 try ShieldPolicy.block(ledger.selectionData)
@@ -93,9 +119,10 @@ import DeviceActivity
 }
 
 private enum ScreenTimeError: LocalizedError {
-    case balance, active
+    case balance, active, noApps
     var errorDescription: String? {
         switch self {
+        case .noApps: return "Wähle und speichere zuerst mindestens eine App oder App-Kategorie unter App-Pakete. Ohne Auswahl startet Detox nicht."
         case .balance: return "Freischaltung nicht möglich: Prüfe Guthaben, Tageslimit und aktive Pausen."
         case .active: return "Beende zuerst die Freischaltung oder die aktive Pause, bevor du die App-Auswahl änderst."
         }

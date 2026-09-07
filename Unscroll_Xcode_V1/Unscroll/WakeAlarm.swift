@@ -37,10 +37,10 @@ import AlarmKit
                 }
                 try cancelExisting()
                 let manager = AlarmManager.shared
+                try Self.writeGentleTone()
                 let finalAttributes = AlarmAttributes<WakeMetadata>(presentation: AlarmPresentation(alert: AlarmPresentation.Alert(title: "Guten Morgen", stopButton: AlarmButton(text: "Aufstehen", textColor: .white, systemImageName: "sun.max.fill"))), tintColor: Palette.teal)
-                _ = try await manager.schedule(id: Self.finalID, configuration: AlarmManager.AlarmConfiguration<WakeMetadata>(schedule: .fixed(end), attributes: finalAttributes))
+                _ = try await manager.schedule(id: Self.finalID, configuration: AlarmManager.AlarmConfiguration<WakeMetadata>(schedule: .fixed(end), attributes: finalAttributes, sound: .named("UnscrollGentle.wav")))
                 if end.timeIntervalSinceNow > 1800 {
-                    try Self.writeGentleTone()
                     let softAttributes = AlarmAttributes<WakeMetadata>(presentation: AlarmPresentation(alert: AlarmPresentation.Alert(title: "Sanft in den Tag", stopButton: AlarmButton(text: "Noch etwas Ruhe", textColor: .white, systemImageName: "moon.fill"))), tintColor: Palette.teal)
                     _ = try await manager.schedule(id: Self.softID, configuration: AlarmManager.AlarmConfiguration<WakeMetadata>(schedule: .fixed(end.addingTimeInterval(-1800)), attributes: softAttributes, sound: .named("UnscrollGentle.wav")))
                 }
@@ -71,13 +71,14 @@ import AlarmKit
     private static func writeGentleTone() throws {
         let directory = try FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("Sounds")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let rate = 22050; let count = rate * 8
+        let rate = 22050; let count = rate * 29
         var data = Data(); var pcm = Data()
         for i in 0..<count {
             let t = Double(i) / Double(rate)
-            let pulse = t.truncatingRemainder(dividingBy: 2)
-            let envelope = min(1, pulse * 4) * exp(-pulse * 1.6) * min(1, t / 3) * min(1, (8-t) * 3)
-            let wave = (sin(t * 2 * .pi * 440) + 0.35 * sin(t * 2 * .pi * 660)) * envelope * 0.25
+            let pulse = (t * 0.5 + t * t / 116).truncatingRemainder(dividingBy: 1)
+            let rise = 0.025 + 0.975 * pow(t / 29, 1.4)
+            let envelope = min(1, pulse * 8) * exp(-pulse * 0.8) * rise * min(1, (29-t) * 15)
+            let wave = (sin(t * 2 * .pi * 440) + 0.35 * sin(t * 2 * .pi * 660) + 0.15 * sin(t * 2 * .pi * 880)) * envelope * 0.6
             var sample = Int16(wave * 32767).littleEndian
             withUnsafeBytes(of: &sample) { pcm.append(contentsOf: $0) }
         }

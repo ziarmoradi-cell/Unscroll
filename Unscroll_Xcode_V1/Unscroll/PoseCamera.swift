@@ -10,6 +10,9 @@ final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSamp
     @Published var running = false
     @Published private(set) var usingFront = true
     private var position = AVCaptureDevice.Position.front
+    private var poseOrientation = CGImagePropertyOrientation.up
+    private var lastOrientationSearch = 0.0
+    @Published var diagnostics = "Noch keine Kamerabilder verarbeitet."
     var onFrame: ((PoseFrame) -> Void)?
     private let queue = DispatchQueue(label: "unscroll.camera", qos: .userInitiated)
     private var configured = false
@@ -103,11 +106,29 @@ final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSamp
         guard now - lastFrameTime >= 1.0 / 30, let pixel = CMSampleBufferGetImageBuffer(buffer) else { return }
         lastFrameTime = now
         let token = captureGeneration
-        let request = VNDetectHumanBodyPoseRequest()
         var result = PoseFrame(time: now, people: 0)
         do {
-            try VNImageRequestHandler(cvPixelBuffer: pixel, orientation: .up).perform([request])
-            let observations = request.results ?? []
+            func detect(_ orientation: CGImagePropertyOrientation) throws -> [VNHumanBodyPoseObservation] {
+                let request = VNDetectHumanBodyPoseRequest()
+                try VNImageRequestHandler(cvPixelBuffer: pixel, orientation: orientation).perform([request])
+                return request.results ?? []
+            }
+            func score(_ observations: [VNHumanBodyPoseObservation]) -> Int {
+                guard observations.count == 1, let points = try? observations[0].recognizedPoints(.all) else { return 0 }
+                return points.values.filter { $0.confidence >= 0.15 }.count
+            }
+            var observations = try detect(poseOrientation)
+            // Vision can miss prone/horizontal bodies. Try rotated analysis, then keep
+            // the winning orientation; map every landmark back to the same preview.
+            if observations.count < 2 && score(observations) < 8 && now-lastOrientationSearch > 0.8 {
+                lastOrientationSearch = now
+                var bestScore = score(observations)
+                let initialOrientation = poseOrientation
+                for orientation in [CGImagePropertyOrientation.up, .right, .left] where orientation != initialOrientation {
+                    let candidate = try detect(orientation); let candidateScore = score(candidate)
+                    if candidateScore > bestScore { observations = candidate; bestScore = candidateScore; poseOrientation = orientation }
+                }
+            }
             result.people = observations.count
             if observations.count == 1, let observation = observations.first {
                 let points = try observation.recognizedPoints(.all)
@@ -115,7 +136,8 @@ final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSamp
                 result.aspectRatio = aspect
                 func joint(_ name: VNHumanBodyPoseObservation.JointName) -> Joint? {
                     guard let p = points[name] else { return nil }
-                    return Joint(x: Double(p.location.x) * aspect, y: Double(p.location.y), confidence: Double(p.confidence))
+                    let u = Double(p.location.x), v = Double(p.location.y)
+                    return PreviewProjection.originalJoint(u: u, v: v, orientation: self.poseOrientation.rawValue, aspect: aspect, confidence: Double(p.confidence))
                 }
                 func body(_ names: [VNHumanBodyPoseObservation.JointName]) -> BodySide? {
                     // Missing hands must not hide otherwise usable squat joints or the overlay.
@@ -127,8 +149,12 @@ final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSamp
             }
         } catch { result.people = 0 }
         let frame = result
+        let elapsed = ProcessInfo.processInfo.systemUptime - now
+        let points = [frame.left, frame.right].compactMap { $0 }.flatMap { [$0.shoulder,$0.elbow,$0.wrist,$0.hip,$0.knee,$0.ankle] }
+        let diagnostic = "Vision: \(frame.people) Person(en) · \(points.filter { $0.confidence >= 0.15 }.count)/12 Körperpunkte · \(Int(elapsed * 1000)) ms Verarbeitung · Bildausrichtung \(poseOrientation.rawValue)"
         DispatchQueue.main.async { [weak self] in
             guard let self, self.generation == token else { return }
+            self.diagnostics = diagnostic
             guard ProcessInfo.processInfo.systemUptime - frame.time < 0.3 else {
                 self.onFrame?(PoseFrame(time: ProcessInfo.processInfo.systemUptime, people: 0)); return
             }

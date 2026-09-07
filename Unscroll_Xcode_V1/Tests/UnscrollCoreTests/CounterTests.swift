@@ -59,7 +59,7 @@ final class CounterTests: XCTestCase {
             var c = PoseCounter(exercise: .pushUps); var time = 0.0
             feed(&c, body: top, count: 5, time: &time)
             feed(&c, body: bottom, count: 5, time: &time)
-            var weak = bottom; weak.ankle.confidence = multiple ? 1 : 0.1
+            var weak = bottom; weak.wrist.confidence = multiple ? 1 : 0.1
             feed(&c, body: weak, count: 1, time: &time, people: multiple ? 2 : 1)
             feed(&c, body: top, count: 5, time: &time)
             XCTAssertEqual(c.progress.reps, 0)
@@ -133,10 +133,10 @@ extension CounterTests {
         }
         XCTAssertEqual(counter.progress.reps, 0)
     }
-    func testObscuredSupportingHandStillPausesPlank() {
+    func testNoVisibleSupportPausesPlank() {
         var counter = PoseCounter(exercise: .plank); var time = 0.0
         feed(&counter, body: top, count: 11, time: &time)
-        var hidden = top; hidden.wrist.confidence = 0
+        var hidden = top; hidden.wrist.confidence = 0; hidden.elbow.confidence = 0
         feed(&counter, body: hidden, count: 11, time: &time)
         XCTAssertEqual(counter.progress.plankSeconds, 1, accuracy: 0.001)
         XCTAssertEqual(counter.progress.currentHold, 0)
@@ -170,5 +170,32 @@ extension CounterTests {
             for angle in [140.0, 115, 95, 115, 140, 165] { sample(angle) }
         }
         XCTAssertEqual(counter.progress.reps, 5)
+    }
+}
+
+extension CounterTests {
+    func testPushUpsCountWhenFeetAreOutsideFrame() {
+        var up = top; var down = bottom
+        up.ankle.confidence = 0; up.knee.confidence = 0
+        down.ankle.confidence = 0; down.knee.confidence = 0
+        var counter = PoseCounter(exercise: .pushUps); var time = 0.0
+        feed(&counter, body: up, count: 3, time: &time)
+        feed(&counter, body: down, count: 3, time: &time)
+        feed(&counter, body: up, count: 3, time: &time)
+        XCTAssertEqual(counter.progress.reps, 1)
+    }
+    func testPlankCountsWithVisibleElbowAndHiddenHand() {
+        var body = top; body.wrist.confidence = 0; body.knee.confidence = 0
+        var counter = PoseCounter(exercise: .plank); var time = 0.0
+        feed(&counter, body: body, count: 11, time: &time)
+        XCTAssertEqual(counter.progress.plankSeconds, 1, accuracy: 0.001)
+    }
+    func testRotatedVisionLandmarksReturnToOriginalPreview() {
+        for (orientation, u, v) in [(UInt32(1), 0.2, 0.7), (UInt32(6), 0.7, 0.8), (UInt32(8), 0.3, 0.2)] {
+            let joint = PreviewProjection.originalJoint(u: u, v: v, orientation: orientation, aspect: 0.5625, confidence: 0.6)
+            XCTAssertEqual(joint.x, 0.1125, accuracy: 0.00001)
+            XCTAssertEqual(joint.y, 0.7, accuracy: 0.00001)
+            XCTAssertEqual(joint.confidence, 0.6)
+        }
     }
 }

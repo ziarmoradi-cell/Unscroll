@@ -18,6 +18,8 @@ struct JourneyView: View {
                 }
                 VStack(alignment: .leading, spacing: 18) {
                     Label("Dein Detox-Programm", systemImage: "mountain.2").font(.title3.bold())
+                    NavigationLink("App-Pakete einrichten / erweitern") { AppGroupsView() }
+                    Text(screenTime.approved && screenTime.hasSelection ? "Bildschirmzeit verbunden · Auswahl vorhanden" : "Vor dem Start: Bildschirmzeit erlauben und Apps speichern.").font(.caption).foregroundStyle(.secondary)
                     if let plan = store.ledger.life.detox, plan.active(at: Date()) {
                         Text(plan.hard ? "Konsequent offline" : "Bewusst reduzieren").font(.headline)
                         Text("Bis \(plan.end.formatted(date: .abbreviated, time: .shortened))")
@@ -48,9 +50,7 @@ struct JourneyView: View {
         }.page().toolbar(.hidden, for: .navigationBar)
         .confirmationDialog("Detox starten? Eine laufende Freigabe endet und deren Restbudget verfällt.", isPresented: $start, titleVisibility: .visible) {
             Button("\(days) Tage starten") {
-                screenTime.blockNow(); guard screenTime.error == nil else { return }
-                let now = Date()
-                store.mutate { $0.life.detox = DetoxPlan(start: now, end: Calendar.current.date(byAdding: .day, value: days, to: now)!, days: days, hard: hard) }
+                screenTime.startDetox(days: days, hard: hard); store.reload()
             }
         }
         .confirmationDialog("Detox abbrechen? Dein bisheriger Fortschritt bleibt, das Programm gilt als abgebrochen.", isPresented: $cancel, titleVisibility: .visible) {
@@ -126,6 +126,7 @@ struct ProfileView: View {
                 Text("Detox und aktive Pausen gelten auch dann, wenn du dein persönliches Limit änderst.").font(.caption)
                 Button("Intro erneut ansehen") { store.mutate { $0.life.profile.completedIntro = false } }
             }
+            Section("Belohnung") { Text("\(store.ledger.repetitionReward) Sekunden Guthaben pro Liegestütz / Kniebeuge. Ambitioniert: 1 Minute pro Wiederholung.") }
             Section("Persönliche Rekorde") {
                 ForEach(Exercise.allCases) { exercise in LabeledContent(exercise.title, value: "\(Int(store.ledger.record(exercise))) \(exercise == .plank ? "s am Stück" : "Wdh.")") }
             }

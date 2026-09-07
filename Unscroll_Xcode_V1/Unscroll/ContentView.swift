@@ -90,7 +90,7 @@ struct ContentView: View {
                 Text("Wähle, welche Apps du mit verdienter Zeit öffnen möchtest.").font(.subheadline).foregroundStyle(.secondary)
                 Button("Bildschirmzeit verbinden") { Task { await screenTime.authorize() } }.buttonStyle(PrimaryButton())
             } else {
-                Button("Apps auswählen") { picker = true }.disabled(screenTime.grant != nil || store.ledger.restricted())
+                NavigationLink("App-Pakete & weitere Apps") { AppGroupsView() }
                 if let grant = screenTime.grant {
                     Text("\(grant.seconds / 60) Minuten Nutzungsbudget aktiv")
                     Text("Die Nutzung deiner gewählten Apps zählt, bis das Budget verbraucht ist. Spätestens nach 24 Stunden endet die Freigabe.").font(.caption).foregroundStyle(.secondary)
@@ -118,7 +118,7 @@ struct ContentView: View {
                             Image(systemName: exercise.symbol).font(.title).foregroundStyle(Palette.teal).frame(width: 40)
                             VStack(alignment: .leading, spacing: 7) {
                                 Text(exercise.title).font(.title3.bold())
-                                Text(exercise == .plank ? "10 Sekunden = 1 Minute" : "Guthaben pro Wiederholung: +\(exercise == .pushUps ? store.ledger.pushUpSeconds : store.ledger.squatSeconds) Sekunden").font(.caption).foregroundStyle(.secondary)
+                                Text(exercise == .plank ? "10 Sekunden = 1 Minute" : "Guthaben pro Wiederholung: +\(store.ledger.repetitionReward) Sekunden").font(.caption).foregroundStyle(.secondary)
                                 Label("PR \(Int(store.ledger.record(exercise))) \(exercise == .plank ? "s am Stück" : "Wdh.")", systemImage: "trophy").font(.caption.bold()).foregroundStyle(Palette.teal)
                             }; Spacer(); Image(systemName: "arrow.up.right")
                         }.panel()

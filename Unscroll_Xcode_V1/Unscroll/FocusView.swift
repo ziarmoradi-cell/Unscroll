@@ -69,7 +69,13 @@ struct SoundCard: View {
                 Spacer(); Image(systemName: "speaker.wave.2")
             }
             Slider(value: $sound.volume, in: 0...1).accessibilityLabel("Lautstärke")
-            Text(sound.playing == .silence ? "Offline erzeugt · mit Abschalttimer" : "Aktiv: \(sound.playing.rawValue)").font(.caption).foregroundStyle(.secondary)
-        }.panel()
+            Text(sound.playing == .silence ? "Offline verfügbar · mit Abschalttimer" : "Aktiv: \(sound.playing.rawValue)").font(.caption).foregroundStyle(.secondary)
+            if selected == .ocean {
+                Link("Wellenaufnahme: Luftrum · CC BY 3.0", destination: URL(string: "https://commons.wikimedia.org/wiki/File:Oceanwavescrushing.ogg")!).font(.caption)
+                Link("Lizenz · 40-Sekunden-Ausschnitt, AAC und kurze Randblenden", destination: URL(string: "https://creativecommons.org/licenses/by/3.0/")!).font(.caption2)
+            }
+        }.panel().onChange(of: selected) { _, new in
+            if sound.playing != .silence { sound.play(new, until: until ?? Date().addingTimeInterval(1800)) }
+        }
     }
 }

@@ -63,12 +63,16 @@ struct WorkoutView: View {
                     }
                     Label("PR: \(Int(max(baseline, recordValue))) \(exercise == .plank ? "Sekunden am Stück" : "Wiederholungen")", systemImage: "trophy.fill").foregroundStyle(Palette.teal)
                     if celebrated { Text("Neuer persönlicher Rekord! 🎉").font(.headline).foregroundStyle(Palette.teal) }
-                    Text(exercise == .squats ? "Handy seitlich etwa auf Hüfthöhe aufstellen. Kopf bis Füße ins Bild bringen; die Hände dürfen verdeckt sein. Gehe mit der Hüfte etwa bis auf Kniehöhe und richte dich wieder auf." : "Handy seitlich und niedrig aufstellen, leicht zu dir neigen. Schultern, Hände, Hüfte und Füße im Bild halten. Bei wenig Platz etwas weiter weg oder die Rückkamera ausprobieren.").font(.footnote).foregroundStyle(.secondary)
+                    Text(exercise == .squats ? "Handy seitlich etwa auf Hüfthöhe aufstellen. Kopf bis Füße ins Bild bringen; die Hände dürfen verdeckt sein. Gehe mit der Hüfte etwa bis auf Kniehöhe und richte dich wieder auf." : "Handy seitlich und niedrig aufstellen, leicht zu dir neigen. Für Liegestütze müssen Schultern, Ellbogen, Hände und Hüfte sichtbar sein. Beim Plank auch die Füße. Bei wenig Platz etwas weiter weg oder die Rückkamera ausprobieren.").font(.footnote).foregroundStyle(.secondary)
                     if !camera.running {
                         Button(started ? "Kamera erneut starten" : "Training starten") { start() }.buttonStyle(.borderedProminent)
                         if camera.problem != nil {
                             Button("iPhone-Einstellungen öffnen") { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } }
                         }
+                    }
+                    DisclosureGroup("Erkennung prüfen") {
+                        Text(camera.diagnostics).font(.caption).textSelection(.enabled)
+                        ShareLink(item: "Unscroll 1.2.2 · " + exercise.title + "\n" + camera.diagnostics + "\n" + progress.message) { Label("Diagnose teilen", systemImage: "square.and.arrow.up") }
                     }
                     Button("Training beenden") { finish(); dismiss() }.buttonStyle(.bordered)
                 }.padding()
@@ -78,7 +82,7 @@ struct WorkoutView: View {
         .interactiveDismissDisabled(camera.running)
         .onAppear {
             baseline = store.ledger.record(exercise)
-            reward = exercise == .pushUps ? store.ledger.pushUpSeconds : store.ledger.squatSeconds
+            reward = store.ledger.repetitionReward
             camera.onFrame = receive
             #if DEBUG && targetEnvironment(simulator)
             if !ProcessInfo.processInfo.arguments.contains("--ui-testing") { start() }

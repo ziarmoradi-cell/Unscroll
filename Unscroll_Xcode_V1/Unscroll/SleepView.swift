@@ -33,7 +33,7 @@ struct SleepView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     Label("Dein Morgen", systemImage: "sunrise").font(.title3.bold())
                     DatePicker("Spätestens aufstehen", selection: $wake, displayedComponents: .hourAndMinute)
-                    Text(alarm.supported ? "Sanfter Ton 30 Minuten vorher, Systemalarm zur Aufstehzeit. Beide Alarme lassen sich einzeln stoppen. Keine Schlafphasenmessung." : "30-Minuten-Fenster: ein sanfter Hinweis zum Start und ein zweiter zur Aufstehzeit. Keine Schlafphasenmessung.").font(.subheadline).foregroundStyle(.secondary)
+                    Text(alarm.supported ? "30 Minuten vorher und zur Aufstehzeit: ein eigener Weckton, der innerhalb von 29 Sekunden deutlich kräftiger und dichter wird. Beide Alarme lassen sich einzeln stoppen. Keine Schlafphasenmessung." : "30-Minuten-Fenster: ein sanfter Hinweis zum Start und ein zweiter zur Aufstehzeit. Keine Schlafphasenmessung.").font(.subheadline).foregroundStyle(.secondary)
                     if alarm.supported {
                         if let date = alarm.scheduled { Label("Aktiv: " + date.formatted(date: .abbreviated, time: .shortened), systemImage: "alarm.fill").font(.subheadline) }
                         Button("Systemwecker setzen") { Task { await alarm.schedule(at: wakeDate) } }.buttonStyle(PrimaryButton()).disabled(alarm.busy)

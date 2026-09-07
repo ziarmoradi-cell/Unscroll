@@ -10,6 +10,7 @@ enum PersonalGoal: String, Codable, CaseIterable, Identifiable {
 enum Difficulty: String, Codable, CaseIterable, Identifiable {
     case gentle = "Sanft", balanced = "Ausgewogen", ambitious = "Ambitioniert"
     var id: String { rawValue }
+    var rewardPerRep: Int { self == .gentle ? 15 : self == .balanced ? 30 : 60 }
     var stepGoal: Int { self == .gentle ? 4000 : self == .balanced ? 7000 : 10000 }
     var repGoal: Int { self == .gentle ? 10 : self == .balanced ? 20 : 40 }
     var dailyBudget: Int { self == .gentle ? 60 : self == .balanced ? 45 : 30 }
@@ -41,6 +42,7 @@ struct DetoxPlan: Codable {
     func active(at date: Date) -> Bool { date >= start && date < end }
 }
 struct Wellbeing: Codable {
+    var savedAppGroups: [String: Data]?
     var profile = PersonalProfile()
     var stepBlocks: [String: Int] = [:]
     var stepTotals: [String: Int] = [:]
@@ -101,4 +103,8 @@ extension Ledger {
     var activeDayCount: Int {
         Set(workouts.map { Self.dayKey($0.date) } + life.focusSessions.filter(\.completed).map { Self.dayKey($0.end) } + life.stepBlocks.filter { $0.value > 0 }.map(\.key)).count
     }
+}
+
+extension Ledger {
+    var repetitionReward: Int { life.profile.difficulty.rewardPerRep }
 }

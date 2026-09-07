@@ -8,7 +8,7 @@ struct SkeletonOverlay: View {
         Canvas { context, size in
             guard let frame, frame.people == 1 else { return }
             let color: Color = valid ? .green : .orange
-            func visible(_ j: Joint) -> Bool { j.confidence >= 0.2 && j.x.isFinite && j.y.isFinite }
+            func visible(_ j: Joint) -> Bool { j.confidence >= 0.1 && j.x.isFinite && j.y.isFinite }
             func point(_ j: Joint) -> CGPoint {
                 let p = PreviewProjection.point(j, aspect: frame.aspectRatio, width: size.width, height: size.height, mirrored: mirrored)
                 return CGPoint(x: p.x, y: p.y)

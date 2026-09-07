@@ -58,7 +58,12 @@ enum Soundscape: String, CaseIterable, Identifiable {
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
             try AVAudioSession.sharedInstance().setActive(true)
-            player = try AVAudioPlayer(data: Self.noise(sound))
+            if sound == .ocean {
+                guard let url = Bundle.main.url(forResource: "OceanWaves", withExtension: "m4a") else {
+                    throw NSError(domain: "Unscroll", code: 2, userInfo: [NSLocalizedDescriptionKey: "Die Meeresaufnahme fehlt im App-Build."])
+                }
+                player = try AVAudioPlayer(contentsOf: url)
+            } else { player = try AVAudioPlayer(data: Self.noise(sound)) }
             player?.numberOfLoops = -1; player?.volume = volume
             guard player?.play() == true else { return }
             playing = sound

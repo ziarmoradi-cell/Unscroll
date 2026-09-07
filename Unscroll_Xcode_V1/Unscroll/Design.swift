@@ -70,7 +70,7 @@ struct IntroView: View {
                     PageHeading(eyebrow: "Dein Tempo", title: "Klein anfangen. Dranbleiben.", subtitle: "Die Schwierigkeit setzt Tagesziele, keine strengeren Vorgaben für deine Körperhaltung.")
                     ForEach(Difficulty.allCases) { level in
                         Button { profile.difficulty = level; profile.dailyBudget = level.dailyBudget } label: {
-                            HStack { VStack(alignment: .leading, spacing: 6) { Text(level.rawValue).font(.headline); Text("\(level.stepGoal) Schritte · \(level.repGoal) Wdh.\nMax. \(level.dailyBudget) Min. Social Media / Tag").font(.caption).foregroundStyle(.secondary) }; Spacer(); Image(systemName: profile.difficulty == level ? "checkmark.circle.fill" : "circle") }.panel()
+                            HStack { VStack(alignment: .leading, spacing: 6) { Text(level.rawValue).font(.headline); Text("\(level.stepGoal) Schritte · \(level.repGoal) Wdh.\nMax. \(level.dailyBudget) Min. Social Media / Tag · +\(level.rewardPerRep) s Guthaben / Wdh.").font(.caption).foregroundStyle(.secondary) }; Spacer(); Image(systemName: profile.difficulty == level ? "checkmark.circle.fill" : "circle") }.panel()
                         }.buttonStyle(.plain)
                     }
                     Text("Guthaben verdienst du durch Bewegung. Berechtigungen fragen wir erst, wenn du eine Funktion nutzt.").font(.footnote).foregroundStyle(.secondary)
