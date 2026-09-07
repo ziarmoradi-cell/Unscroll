@@ -153,3 +153,22 @@ extension CounterTests {
         XCTAssertEqual(letterbox.y, 100, accuracy: 0.001)
     }
 }
+
+extension CounterTests {
+    func testFastTrajectoryCountsWithOnlyOneSampleAtEachEndpoint() {
+        var counter = PoseCounter(exercise: .pushUps)
+        var time = 0.0
+        func sample(_ degrees: Double) {
+            var body = top
+            let a = degrees * Double.pi / 180
+            body.wrist = Joint(x: body.elbow.x + sin(a) * 0.2, y: body.elbow.y + cos(a) * 0.2)
+            time += 1.0 / 30
+            counter.process(PoseFrame(time: time, left: body))
+        }
+        sample(170); sample(170)
+        for _ in 0..<5 {
+            for angle in [140.0, 115, 95, 115, 140, 165] { sample(angle) }
+        }
+        XCTAssertEqual(counter.progress.reps, 5)
+    }
+}

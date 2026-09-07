@@ -89,7 +89,7 @@ Game Center requires the App Store Connect configuration. No App Store upload is
 The old all-joint confidence cutoff and 150 ms endpoint holds prevented valid fast movements
 from counting and made acquisition unnecessarily strict. The counter now requires only
 exercise-relevant joints (no hands for squats), accepts moderate-confidence detections,
-uses two endpoint observations with full depth/return hysteresis and a 180 ms minimum
+uses trajectory-confirmed endpoints (or two observations for abrupt transitions), full depth/return hysteresis and a 180 ms minimum
 cycle as an anti-spike check. It no longer enforces an 800 ms exercise pace. Processing targets
 up to 30 fps subject to device performance. Full depth, return and actual detected frames
 remain necessary: missed camera observations cannot be reconstructed.

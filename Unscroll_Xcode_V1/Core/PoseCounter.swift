@@ -60,6 +60,7 @@ struct PoseCounter {
     private var side: Int?
     private var previousValid = false
     private var lastHip: Joint?
+    private var lastMovementAngle: Double?
 
     static func angle(_ a: Joint, _ b: Joint, _ c: Joint) -> Double {
         let denominator = a.distance(to: b) * c.distance(to: b)
@@ -70,7 +71,7 @@ struct PoseCounter {
 
     mutating func interrupt() {
         phase = 0; endpointFrames = 0; cycleStart = nil; side = nil
-        previousValid = false; lastTime = nil; lastHip = nil
+        previousValid = false; lastTime = nil; lastHip = nil; lastMovementAngle = nil
         progress.currentHold = 0; progress.validPose = false; progress.depth = 0; progress.bodyDetected = false
         progress.message = "Pausiert – bring deinen ganzen Körper ins Bild."
     }
@@ -168,10 +169,19 @@ struct PoseCounter {
         }
         if let cycleStart, frame.time - cycleStart > 12 { phase = 0; endpointFrames = 0; self.cycleStart = nil }
         let condition = phase == 1 ? bottom : top
-        // Two observations reject isolated Vision spikes without requiring a pause.
-        // At 30 fps an endpoint needs ~33 ms, not the previous 150 ms hold.
+        let movementAngle = exercise == .pushUps ? elbowAngle : kneeAngle
+        let previousAngle = lastMovementAngle
+        lastMovementAngle = movementAngle
+        // A single endpoint sample is enough when an adjacent intermediate angle
+        // confirms the trajectory. A direct top/bottom spike still needs two samples.
+        let approachingBottom = phase == 1 && bottom && previousAngle.map {
+            $0 > movementAngle && $0 < 145 && $0 - movementAngle <= 45
+        } == true
+        let approachingTop = phase == 2 && top && previousAngle.map {
+            $0 < movementAngle && $0 > 120 && movementAngle - $0 <= 45
+        } == true
         endpointFrames = condition ? endpointFrames + 1 : 0
-        if endpointFrames >= 2 {
+        if endpointFrames >= 2 || approachingBottom || approachingTop {
             if phase == 0 { phase = 1; cycleStart = frame.time }
             else if phase == 1 { phase = 2 }
             else {
