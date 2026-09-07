@@ -199,3 +199,28 @@ extension CounterTests {
         }
     }
 }
+
+extension CounterTests {
+    func testCameraQualityUsesTheJointsRequiredByEachExercise() {
+        var body = standing
+        body.wrist.confidence = 0; body.elbow.confidence = 0
+        XCTAssertEqual(body.quality(for: .squats), 1)
+        XCTAssertEqual(body.quality(for: .pushUps), 0)
+        XCTAssertEqual(body.quality(for: .plank), 0)
+        body.elbow.confidence = 0.6
+        XCTAssertEqual(body.quality(for: .plank), 0.6)
+        body.ankle.confidence = 0; body.wrist.confidence = 0.8
+        XCTAssertEqual(body.quality(for: .pushUps), 0.6)
+        XCTAssertEqual(body.quality(for: .plank), 0)
+    }
+    func testNonfiniteSideDoesNotHideUsableOtherSide() {
+        var invalid = top; invalid.shoulder.x = .nan
+        var counter = PoseCounter(exercise: .pushUps)
+        var time = 0.0
+        for body in [top, top, bottom, bottom, top, top] {
+            time += 0.1
+            counter.process(PoseFrame(time: time, left: invalid, right: body))
+        }
+        XCTAssertEqual(counter.progress.reps, 1)
+    }
+}

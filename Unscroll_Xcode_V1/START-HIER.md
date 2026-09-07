@@ -33,3 +33,15 @@ Diese ZIP enthält das ganze Xcode-Projekt. Du musst keine einzelnen Code-Dateie
 5. Nach Apples Verarbeitung den neuen Build in TestFlight auswählen. Eine GitHub-Änderung oder diese ZIP allein aktualisiert die installierte App nicht.
 
 Nicht stören, True Tone und Graustufen werden über iOS bedient. Unscroll zeigt dafür Anleitungen. Der Systemwecker ab iOS 26 verwendet AlarmKit; auf älteren Systemen sind nur ausdrücklich als solche bezeichnete Erinnerungen verfügbar. Es gibt keine Schlafphasenmessung.
+
+## Stand dieser Fortsetzung
+
+**Quellcode zur Prüfung:** Den Stand der automatischen Tests und des Simulator-Builds
+findest du im zugehörigen GitHub-Actions-Lauf. Ein erfolgreicher Lauf ersetzt keinen
+Kameratest auf einem echten iPhone. Bitte vor der Veröffentlichung neu bauen und testen.
+
+Die Kamera sucht passend zur Übung nach den nötigen Körperpunkten. Die neue Erkennung
+muss auf einem echten iPhone mit Liegestützen, Kniebeugen und Plank geprüft werden.
+Unter „Erkennung prüfen“ lassen sich sichtbare Punkte und Verarbeitungszeit ablesen.
+Der Weckton wird innerhalb von 29 Sekunden lauter; ein durchgehender 30-Minuten-Anstieg
+ist noch nicht umgesetzt. Die ZIP ist Quellcode, kein bereits hochgeladener TestFlight-Build.

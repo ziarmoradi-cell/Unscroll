@@ -1,15 +1,15 @@
-# Unscroll 1.2 – validation
+# Unscroll 1.2.2 – validation
 
 ## Automated gates
 
-The GitHub workflow builds the native app and embedded monitor with Xcode 26.3 and
+The GitHub workflow builds the native app and embedded monitor with the newest stable installed Xcode and
 runs the core Swift package. It also installs and launches the unsigned simulator app
 and captures onboarding plus all five main tabs using isolated, empty test data.
 
 Core tests cover complete push-up/squat cycles, missing frames, pose loss, multiple people,
 mirroring, jitter, valid plank duration and continuous PR, reward boundaries, stale callbacks,
 idempotent checkpoints, old-ledger migration, step caps/deduplication, daily limits/refunds,
-strict pause expiry and interrupted focus. The final run link is recorded in the delivered update.
+strict pause expiry and interrupted focus. A passing run applies only to its exact commit. Physical-device checks below remain separate.
 
 ## Required physical-iPhone acceptance (not executed in the remote workspace)
 
@@ -45,3 +45,23 @@ CI is an unsigned compiler/logic/render check, not proof of device recognition a
 capabilities. App Store upload, Apple review, Family Controls distribution permission, actual camera
 calibration, alarms and Game Center account checks remain device/account operations. No production
 screen-time baseline, sleep-stage inference, live friend exercise feed or unbypassable lockdown is claimed.
+
+## Continuation on 7 September 2026
+
+Camera orientation search now scores the joints required by the selected exercise on one
+body side. Missing hands do not suppress squat detection; missing feet do not suppress
+push-ups. Invalid coordinates cannot hide a usable opposite side. Search probes at most
+one alternative orientation per 0.8 seconds, reducing sequential Vision work.
+Regression tests cover exercise-specific visibility and nonfinite-side fallback.
+
+The alarm tone rises over 29 seconds. The two scheduled alarms are 30 minutes apart;
+this is not a continuous 30-minute crescendo. This limitation remains open.
+
+Verification for this continuation: project generation is reproducible; all referenced
+Swift sources, plist/entitlement files, JSON and bundled audio are present and parseable
+where applicable. Swift/Xcode is unavailable in this Linux workspace. The user authorized upload of the
+six changed source/document files and a new CI run. See the GitHub Actions run for
+the exact commit for its compiler and test results. The previous commit
+93b266ce1a68a89718020375cd2a444f13477ada passed:
+https://github.com/ziarmoradi-cell/Unscroll/actions/runs/34112518327
+That result does not validate the new camera changes. No App Store upload was performed.

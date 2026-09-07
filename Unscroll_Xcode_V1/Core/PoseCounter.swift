@@ -28,6 +28,20 @@ struct BodySide {
     var knee: Joint
     var ankle: Joint
     var confidence: Double { [shoulder, elbow, wrist, hip, knee, ankle].map(\.confidence).min() ?? 0 }
+    func required(for exercise: Exercise) -> [(String, Joint)] {
+        switch exercise {
+        case .pushUps: return [("Schulter", shoulder), ("Hüfte", hip), ("Ellbogen", elbow), ("Hände", wrist)]
+        case .squats: return [("Schulter", shoulder), ("Hüfte", hip), ("Knie", knee), ("Füße", ankle)]
+        case .plank:
+            let support = elbow.confidence > wrist.confidence ? ("Ellbogen", elbow) : ("Hände", wrist)
+            return [("Schulter", shoulder), ("Hüfte", hip), ("Füße", ankle), support]
+        }
+    }
+    func quality(for exercise: Exercise) -> Double {
+        required(for: exercise).map { _, joint in
+            joint.x.isFinite && joint.y.isFinite && joint.confidence.isFinite ? joint.confidence : 0
+        }.min() ?? 0
+    }
 }
 
 struct PoseFrame {
@@ -86,17 +100,8 @@ struct PoseCounter {
             return progress
         }
         let candidates = [frame.left, frame.right]
-        func required(_ body: BodySide) -> [(String, Joint)] {
-            if exercise == .pushUps { return [("Schulter", body.shoulder), ("Hüfte", body.hip), ("Ellbogen", body.elbow), ("Hände", body.wrist)] }
-            if exercise == .plank {
-                let support = body.elbow.confidence > body.wrist.confidence ? ("Ellbogen", body.elbow) : ("Hände", body.wrist)
-                return [("Schulter", body.shoulder), ("Hüfte", body.hip), ("Füße", body.ankle), support]
-            }
-            return [("Schulter", body.shoulder), ("Hüfte", body.hip), ("Knie", body.knee), ("Füße", body.ankle)]
-        }
         func quality(_ body: BodySide?) -> Double {
-            guard let body else { return 0 }
-            return required(body).map { $0.1.confidence }.min() ?? 0
+            body?.quality(for: exercise) ?? 0
         }
         let best = quality(frame.left) >= quality(frame.right) ? 0 : 1
         if side == nil { side = best }
@@ -108,7 +113,7 @@ struct PoseCounter {
             interrupt(); progress.message = "Noch keine Körperpunkte – tritt ins Kamerabild und sorge für Licht."
             return progress
         }
-        let joints = required(body)
+        let joints = body.required(for: exercise)
         let missing = joints.filter { !$0.1.confidence.isFinite || $0.1.confidence < 0.15 || !$0.1.x.isFinite || !$0.1.y.isFinite }
         guard missing.isEmpty else {
             interrupt(); progress.message = "Noch nicht gut sichtbar: " + missing.map { $0.0 }.joined(separator: ", ") + ". Handy seitlich aufstellen."

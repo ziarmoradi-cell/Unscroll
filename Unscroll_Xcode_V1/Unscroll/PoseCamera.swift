@@ -12,6 +12,8 @@ final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSamp
     private var position = AVCaptureDevice.Position.front
     private var poseOrientation = CGImagePropertyOrientation.up
     private var lastOrientationSearch = 0.0
+    private var nextOrientationIndex = 0
+    private let exercise: Exercise
     @Published var diagnostics = "Noch keine Kamerabilder verarbeitet."
     var onFrame: ((PoseFrame) -> Void)?
     private let queue = DispatchQueue(label: "unscroll.camera", qos: .userInitiated)
@@ -20,7 +22,8 @@ final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSamp
     private var generation = UUID() // main thread
     private var captureGeneration = UUID() // capture queue
     private var notifications: [NSObjectProtocol] = []
-    override init() {
+    init(exercise: Exercise) {
+        self.exercise = exercise
         super.init()
         for name in [AVCaptureSession.wasInterruptedNotification, AVCaptureSession.runtimeErrorNotification] {
             notifications.append(NotificationCenter.default.addObserver(forName: name, object: session, queue: .main) { [weak self] _ in
@@ -51,6 +54,7 @@ final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSamp
             do {
                 if !self.configured { try self.configure() }
                 self.captureGeneration = token; self.lastFrameTime = 0
+                self.poseOrientation = .up; self.lastOrientationSearch = 0; self.nextOrientationIndex = 0
                 self.session.startRunning()
                 let active = self.session.isRunning
                 DispatchQueue.main.async {
@@ -113,20 +117,39 @@ final class PoseCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSamp
                 try VNImageRequestHandler(cvPixelBuffer: pixel, orientation: orientation).perform([request])
                 return request.results ?? []
             }
-            func score(_ observations: [VNHumanBodyPoseObservation]) -> Int {
+            func score(_ observations: [VNHumanBodyPoseObservation]) -> Double {
                 guard observations.count == 1, let points = try? observations[0].recognizedPoints(.all) else { return 0 }
-                return points.values.filter { $0.confidence >= 0.15 }.count
+                func joint(_ name: VNHumanBodyPoseObservation.JointName) -> Joint {
+                    guard let p = points[name] else { return Joint(x: 0, y: 0, confidence: 0) }
+                    return Joint(x: Double(p.location.x), y: Double(p.location.y), confidence: Double(p.confidence))
+                }
+                func side(_ names: [VNHumanBodyPoseObservation.JointName]) -> BodySide {
+                    let p = names.map(joint)
+                    return BodySide(shoulder: p[0], elbow: p[1], wrist: p[2], hip: p[3], knee: p[4], ankle: p[5])
+                }
+                let left = side([.leftShoulder, .leftElbow, .leftWrist, .leftHip, .leftKnee, .leftAnkle])
+                let right = side([.rightShoulder, .rightElbow, .rightWrist, .rightHip, .rightKnee, .rightAnkle])
+                return max(left.quality(for: exercise), right.quality(for: exercise))
             }
             var observations = try detect(poseOrientation)
-            // Vision can miss prone/horizontal bodies. Try rotated analysis, then keep
-            // the winning orientation; map every landmark back to the same preview.
-            if observations.count < 2 && score(observations) < 8 && now-lastOrientationSearch > 0.8 {
+            // Search for the joints this exercise needs, not an unrelated total count.
+            // Probe one alternative per search to avoid three sequential Vision requests
+            // making every result too old for the counter on slower phones.
+            if observations.count < 2 && score(observations) < 0.3 && now-lastOrientationSearch > 0.8 {
                 lastOrientationSearch = now
-                var bestScore = score(observations)
-                let initialOrientation = poseOrientation
-                for orientation in [CGImagePropertyOrientation.up, .right, .left] where orientation != initialOrientation {
-                    let candidate = try detect(orientation); let candidateScore = score(candidate)
-                    if candidateScore > bestScore { observations = candidate; bestScore = candidateScore; poseOrientation = orientation }
+                let orientations: [CGImagePropertyOrientation] = [.up, .right, .left]
+                var alternative = orientations[nextOrientationIndex % orientations.count]
+                nextOrientationIndex += 1
+                if alternative == poseOrientation {
+                    alternative = orientations[nextOrientationIndex % orientations.count]
+                    nextOrientationIndex += 1
+                }
+                let candidate = try detect(alternative)
+                if candidate.count > 1 {
+                    // Never select a one-person interpretation over a detected group.
+                    observations = candidate
+                } else if score(candidate) > score(observations) {
+                    observations = candidate; poseOrientation = alternative
                 }
             }
             result.people = observations.count

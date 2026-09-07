@@ -5,7 +5,7 @@ struct WorkoutView: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var camera = PoseCamera()
+    @StateObject private var camera: PoseCamera
     @State private var counter: PoseCounter
     @State private var id = UUID()
     @State private var baseline = 0.0
@@ -17,7 +17,11 @@ struct WorkoutView: View {
     @State private var poseFrame: PoseFrame?
     @State private var showLines = true
     private let watchdog = Timer.publish(every: 0.2, on: .main, in: .common).autoconnect()
-    init(exercise: Exercise) { self.exercise = exercise; _counter = State(initialValue: PoseCounter(exercise: exercise)) }
+    init(exercise: Exercise) {
+        self.exercise = exercise
+        _camera = StateObject(wrappedValue: PoseCamera(exercise: exercise))
+        _counter = State(initialValue: PoseCounter(exercise: exercise))
+    }
     private var progress: WorkoutProgress { counter.progress }
     private var recordValue: Double { exercise == .plank ? progress.bestHold : Double(progress.reps) }
     var body: some View {
