@@ -1,8 +1,8 @@
-# Unscroll 1.2
+# Unscroll 1.2.1
 
 Native SwiftUI app for movement-earned social-media time, focus and digital breaks.
 This update preserves the supplied Mac project's bundle ID `com.ziar.unscroll`, team,
-AppIcon and signing settings. Version 1.2 / build 3; iOS 17.4+, Xcode 26+ recommended.
+AppIcon and signing settings. Version 1.2.1 / build 4; iOS 17.4+, Xcode 26+ recommended.
 
 ## Product
 
@@ -83,3 +83,23 @@ Game Center requires the App Store Connect configuration. No App Store upload is
 - https://developer.apple.com/documentation/alarmkit
 - https://developer.apple.com/documentation/gamekit/gklocalplayer/presentfriendrequestcreator(from:)-7j1kn
 - https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api
+
+## Camera feedback correction (1.2.1)
+
+The old all-joint confidence cutoff and 150 ms endpoint holds prevented valid fast movements
+from counting and made acquisition unnecessarily strict. The counter now requires only
+exercise-relevant joints (no hands for squats), accepts moderate-confidence detections,
+uses two endpoint observations with full depth/return hysteresis and a 180 ms minimum
+cycle as an anti-spike check. It no longer enforces an 800 ms exercise pace. Processing targets
+up to 30 fps subject to device performance. Full depth, return and actual detected frames
+remain necessary: missed camera observations cannot be reconstructed.
+
+A live joint/line overlay shares the preview's aspect-fit projection and mirror setting.
+Orange displays detected body parts even before the posture qualifies; green marks accepted
+posture. Missing joints and camera-placement guidance are explicit. Camera opens with the
+workout, front/rear switching resets the movement phase, and stale overlays clear on interruption.
+The reward label now explicitly says social-media credit, not repetition duration.
+
+Synthetic regression tests cover fast cycles, shallow reps, partially occluded squat hands,
+moderate-confidence plank, hidden support hands and overlay letterboxing/mirroring.
+These checks do not prove real camera accuracy; physical-device re-testing remains required.

@@ -1,4 +1,4 @@
-# Unscroll 1.2
+# Unscroll 1.2.1
 
 **Das aktuelle native iPhone-Projekt liegt im Ordner [Unscroll_Xcode_V1](Unscroll_Xcode_V1).**
 
@@ -12,6 +12,6 @@ Fokus mit Offline-Klängen, Nachtpause und Wecker, Detox-Programme, Tipps und Ga
 Die alte Datei `Unscroll_Xcode_V1(1).zip` ist ein historischer Stand und enthält dieses Update **nicht**.
 GitHub aktualisiert eine bereits auf dem iPhone installierte App nicht automatisch.
 
-Version 1.2 / Build 3 · iOS 17.4+ · Systemwecker ab iOS 26 mit Xcode 26+.
+Version 1.2.1 / Build 4 · iOS 17.4+ · Systemwecker ab iOS 26 mit Xcode 26+.
 
 [Funktionsumfang](Unscroll_Xcode_V1/README.md) · [Validierung und Gerätetest](Unscroll_Xcode_V1/VALIDATION.md)

@@ -1,7 +1,7 @@
 name: iOS build and counting tests
 on:
   push:
-    branches: [feature/pose-recognition]
+    branches: [feature/pose-recognition, fix/camera-feedback]
   pull_request:
   workflow_dispatch:
 permissions:

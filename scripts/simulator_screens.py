@@ -11,7 +11,7 @@ run('xcrun', 'simctl', 'bootstatus', udid, '-b')
 app = os.environ['RUNNER_TEMP'] + '/UnscrollBuild/Build/Products/Debug-iphonesimulator/Unscroll.app'
 run('xcrun', 'simctl', 'install', udid, app)
 Path('screenshots').mkdir(exist_ok=True)
-for screen in ['onboarding', 'home', 'move', 'focus', 'sleep', 'more']:
+for screen in ['move', 'workout']:
     subprocess.run(['xcrun', 'simctl', 'terminate', udid, 'com.ziar.unscroll'], capture_output=True)
     run('xcrun', 'simctl', 'launch', udid, 'com.ziar.unscroll', '--ui-testing', '--ui-screen='+screen)
     time.sleep(3)
